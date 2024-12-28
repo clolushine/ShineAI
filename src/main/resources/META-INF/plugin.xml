@@ -1,0 +1,35 @@
+<idea-plugin>
+  <id>ShineAI</id>
+  <name>ShineAI</name>
+  <vendor email="shine4387@outlook.com" url="https://github.com/cloudshinezhong">shine</vendor>
+
+  <depends>com.intellij.modules.platform</depends>
+  <depends>org.intellij.plugins.markdown</depends>
+
+  <extensions defaultExtensionNs="com.intellij">
+    <toolWindow id="ShineAI" anchor="right" icon="/icons/toolWindow.svg" canCloseContents="true"
+                factoryClass="com.shine.ai.MyToolWindowFactory"/>
+    <applicationConfigurable parentId="tools" instance="com.shine.ai.settings.AIAssistantSettingsPanel"
+                             id="com.shine.ai.settings.AIAssistantSettings"
+                             displayName="AIAssistant"/>
+    <applicationConfigurable parentId="com.shine.ai.settings.AIAssistantSettings" instance="com.shine.ai.settings.CFAISettingPanel"
+                             id="com.shine.ai.settings.CloudflareAI"
+                             displayName="CloudflareAI"/>
+    <applicationConfigurable parentId="com.shine.ai.settings.AIAssistantSettings" instance="com.shine.ai.settings.GoogleAISettingPanel"
+                             id="com.shine.ai.settings.GoogleAI"
+                             displayName="GoogleAI"/>
+    <applicationConfigurable parentId="com.shine.ai.settings.AIAssistantSettings" instance="com.shine.ai.settings.GroqAISettingPanel"
+                             id="com.shine.ai.settings.GroqAI"
+                             displayName="GroqAI"/>
+    <applicationService serviceImplementation="com.shine.ai.settings.AIAssistantSettingsState"/>
+    <applicationService serviceImplementation="com.shine.ai.core.TokenManager"/>
+    <projectService serviceImplementation="com.shine.ai.core.SendAction"/>
+    <projectService serviceImplementation="com.shine.ai.CloudflareAIHandler"/>
+    <projectService serviceImplementation="com.shine.ai.GoogleAIHandler"/>
+    <projectService serviceImplementation="com.shine.ai.GroqAIHandler"/>
+    <iconMapper mappingFile="AIIconMappings.json"/>
+  </extensions>
+
+  <actions>
+  </actions>
+</idea-plugin>

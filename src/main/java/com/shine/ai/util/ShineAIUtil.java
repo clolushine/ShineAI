@@ -1,0 +1,212 @@
+package com.shine.ai.util;
+
+import cn.hutool.http.HttpUtil;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.intellij.openapi.actionSystem.ActionPlaces;
+import com.intellij.openapi.actionSystem.AnActionEvent;
+import com.intellij.openapi.actionSystem.DataContext;
+import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.MessageDialogBuilder;
+import com.intellij.openapi.ui.MessageType;
+import com.shine.ai.message.MsgEntryBundle;
+import com.shine.ai.settings.AIAssistantSettingsState;
+import com.shine.ai.ui.action.SettingAction;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.swing.*;
+import java.util.Map;
+import java.util.Objects;
+
+import static com.shine.ai.settings.AIAssistantSettingsPanel.SHINE_AI_BASE_URL;
+
+
+public class ShineAIUtil {
+    private static final Logger LOG = LoggerFactory.getLogger(ShineAIUtil.class);
+
+    public static String baseUrl = SHINE_AI_BASE_URL;
+    public static Integer timeout = 60000;
+    public static AIAssistantSettingsState state = AIAssistantSettingsState.getInstance();
+
+    public static String request(String url,String method, JsonObject options, Integer retry) {
+        String URL = baseUrl +  url;
+        try {
+            String response;
+            switch (method.toUpperCase()) { // 将 method 转换为大写进行比较
+                case "GET":
+                    StringBuilder newUrl = new StringBuilder(baseUrl + url + "?"); // 基础 URL 和路径
+                    for (Map.Entry<String, JsonElement> entry : options.entrySet()) {
+                        String key = entry.getKey();
+                        String value = entry.getValue().toString().replace("\"","");
+                        newUrl.append(key).append("=").append(value).append("&");  // 直接拼接参数，不使用 urlBuilder
+                    }
+                    newUrl = new StringBuilder(newUrl.substring(0, newUrl.length() - 1)); // 去除最后一个 "&"
+                    response = HttpUtil.createGet(String.valueOf(newUrl))
+                            .header("Authorization", "Bearer " + state.UserToken)
+                            .timeout(timeout)
+                            .execute().body();
+                    break;
+                case "POST":
+                    response = HttpUtil.createPost(URL)
+                            .header("Content-Type", "application/json")
+                            .header("Authorization", "Bearer " + state.UserToken)
+                            .body(options.toString())
+                            .timeout(timeout)
+                            .execute().body();
+                    break;
+                default:
+                    throw new IllegalArgumentException("Unsupported HTTP method: " + method);
+            }
+            if (response.contains("JwtTokenExpired") && retry<3) {
+                refreshUserToken();
+                return request(url,method,options,++retry);
+            }
+            JsonObject object = JsonParser.parseString(response).getAsJsonObject();
+            if (!object.keySet().isEmpty()) {
+                if (Objects.equals(object.get("status").getAsString(), "err")) {
+                    String errorMessage = "";
+                    if (object.keySet().contains("message")) {
+                        errorMessage = object.get("message").getAsString();
+                    }
+                    LOG.info("ShineAIUtil Request: question={}",errorMessage);
+                }
+            }
+            return response;
+        } catch (Exception e) {
+            System.out.println("ShineAIUtil Request: exception" + e.getMessage());
+            LOG.info("ShineAIUtil Request: exception={}",e.getMessage());
+            return "{\"status\":\"err\"}";
+        }
+    }
+
+    public static void loginUser(String mail,String pass, JComponent component) {
+        JsonObject params = new JsonObject();
+        String URL = "/login";
+        params.addProperty("mail",mail);
+        params.addProperty("pass",pass);
+        try {
+            String grants = request(URL,"POST",params,0);
+            JsonObject object = JsonParser.parseString(grants).getAsJsonObject();
+            if (!object.keySet().isEmpty()) {
+                if (Objects.equals(object.get("status").getAsString(), "err")) {
+                    String errorMessage = "";
+                    if (object.keySet().contains("message")) {
+                        errorMessage = object.get("message").getAsString();
+                    }
+                    BalloonUtil.showBalloon("LoginUser Failed " + object.get("code") + "\n\nLoginUser failed, error: " + (errorMessage.isEmpty() ? object.get("err_key").getAsString() : errorMessage),MessageType.ERROR,component);
+                    return;
+                }
+            }
+            JsonObject resData = object.get("data").getAsJsonObject(); // 直接赋值
+            state.setUserInfo(resData); // 存到storage
+            state.UserToken = resData.get("token").getAsString();
+            BalloonUtil.showBalloon("LoginUser successful ",MessageType.INFO,component);
+        } catch (Exception e) {
+            LOG.info("ShineAIUtil loginUser: exception={}",e.getMessage());
+            BalloonUtil.showBalloon("Create UserToken Failed" + "\n\nCreate UserToken failed, error: " + e.getMessage(),MessageType.ERROR,component);
+        }
+    }
+
+    public static void logOutUser(JComponent component) {
+        JsonObject params = new JsonObject();
+        String URL = "/user/logout";
+        if (state.getUserInfo().has("id")) {
+            params.addProperty("uid",state.getUserInfo().get("id").getAsString());
+        }
+        try {
+            String grants = request(URL,"POST",params,0);
+            JsonObject object = JsonParser.parseString(grants).getAsJsonObject();
+            if (!object.keySet().isEmpty()) {
+                if (Objects.equals(object.get("status").getAsString(), "err")) {
+                    String errorMessage = "";
+                    if (object.keySet().contains("message")) {
+                        errorMessage = object.get("message").getAsString();
+                    }
+                    BalloonUtil.showBalloon("LogoutUser Failed " + object.get("code") + "\n\nLogoutUser failed, error: " + (errorMessage.isEmpty() ? object.get("err_key").getAsString() : errorMessage),MessageType.ERROR,component);
+                }
+            }
+            BalloonUtil.showBalloon("LogoutUser successful ",MessageType.INFO,component);
+        } catch (Exception e) {
+            LOG.info("ShineAIUtil logOutUser: exception={}",e.getMessage());
+            BalloonUtil.showBalloon("LogoutUser Failed" + "\n\nLogoutUser failed, error: " + e.getMessage(),MessageType.ERROR,component);
+        }
+        // 无论是否退出登录，均删除登录信息
+        state.setUserInfo(new JsonObject());
+        state.UserToken = "";
+    }
+
+    public static void refreshUserToken() {
+        JsonObject params = new JsonObject();
+        String URL = "/reToken";
+        if (state.getUserInfo().has("refreshToken")) {
+            params.addProperty("refreshToken",state.getUserInfo().get("refreshToken").getAsString());
+        }
+        try {
+            String grants = request(URL,"POST",params,0);
+            if (grants.contains("JwtTokenInvalid") ||
+                    grants.contains("JwtTokenSignatureMismatched") ||
+                    grants.contains("JwtTokenExpired")
+            ) {
+                state.setUserInfo(new JsonObject());
+                state.UserToken = "";
+                boolean yes = MessageDialogBuilder.yesNo("登入过期", "身份信息过期，请到设置中AIAssistant中登入后重试")
+                        .yesText("是")
+                        .noText("否").ask((Project) null);
+                if (yes) {
+                   SettingAction openSetting = new SettingAction(MsgEntryBundle.message("action.settings"));
+                    // 创建一个模拟的 AnActionEvent 对象
+                    AnActionEvent event = AnActionEvent.createFromAnAction(openSetting, null, ActionPlaces.UNKNOWN, DataContext.EMPTY_CONTEXT);
+                    openSetting.actionPerformed(event);
+                }
+                return;
+            }
+            JsonObject object = JsonParser.parseString(grants).getAsJsonObject();
+            if (object.get("code").getAsInt() == 0 && object.has("data")) {
+                JsonObject resData = object.get("data").getAsJsonObject(); // 解构data
+                state.UserToken = resData.get("token").getAsString(); // 更新 token
+            }
+        } catch (Exception e) {
+            LOG.info("ShineAIUtil RefreshUserToken: exception={}",e.getMessage());
+            MessageDialogBuilder.okCancel("RefreshUserToken Failed","RefreshUserToken failed, error: " + e.getMessage());
+        }
+    }
+
+    public static String[] getAIModels(String vendor,JComponent component) {
+        JsonObject params = new JsonObject();
+        String[] models = {};
+        String URL;
+        switch (vendor) {
+            case "GoogleAI":
+                URL = "/gem/gems";
+                break;
+            case "GroqAI":
+                URL = "/gpt/models";
+                break;
+            default:
+                URL = "/ai/aiModels";
+                break;
+        }
+        if (state.getUserInfo().has("id")) {
+            params.addProperty("uid",state.getUserInfo().get("id").getAsString());
+        }
+        try {
+            String grants = request(URL,"GET",params,0);
+            JsonObject object = JsonParser.parseString(grants).getAsJsonObject();
+            if (object.get("code").getAsInt() == 0 && object.has("data")) {
+                JsonArray resData = object.get("data").getAsJsonArray(); // 解构data
+                models = resData.asList().stream()
+                        .map(JsonElement::getAsString)
+                        .toArray(String[]::new);
+                return models;
+            }
+        } catch (Exception e) {
+            LOG.info("ShineAIUtil GetAIModels: exception={}",e.getMessage());
+            MessageDialogBuilder.okCancel("GetAIModels Failed",
+                    "GetAIModels failed, error: " + e.getMessage());
+        }
+        return models;
+    }
+}
