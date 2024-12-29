@@ -39,7 +39,7 @@ public class MessageComponent extends JBPanel<MessageComponent> {
 
     private final AIAssistantSettingsState stateStore = AIAssistantSettingsState.getInstance();
 
-    private final MessagePanel component = new MessagePanel();
+//    private final MessagePanel component = new MessagePanel();
 
     private final URL cssResource;
 
@@ -110,7 +110,7 @@ public class MessageComponent extends JBPanel<MessageComponent> {
 
         if (stateStore.enableAvatar && showActions) {
             JPanel iconPanel = new JPanel(new BorderLayout());
-            iconPanel.setOpaque(false);
+            iconPanel.setOpaque(true);
 //            Image imageIcon;
 //            try {
 //                InputStream inputStream = getClass().getResourceAsStream(avatar); // 注意开头的斜杠
@@ -140,27 +140,27 @@ public class MessageComponent extends JBPanel<MessageComponent> {
                     } catch (Exception e) {
                         imageIcon = isMe ? new ImageIcon(new URL(AIAssistantIcons.ME_URL)) : new ImageIcon(new URL(AIAssistantIcons.AI_URL));
                     }
-                    // 确保图片加载完成 (如果需要)
-                    if (imageIcon.getImageLoadStatus() != MediaTracker.COMPLETE) {
-                        return null;
-                    }
+//                    // 确保图片加载完成 (如果需要)
+//                    if (imageIcon.getImageLoadStatus() != MediaTracker.COMPLETE) {
+//                        return null;
+//                    }
                     return ImageLoader.scaleImage(imageIcon.getImage(), 32, 32);  // 在后台线程缩放图片
                 }
                 @Override
                 protected void done() {
                     try {
                         Image scaledImage = (Image) get();
-                        if (scaledImage != null) {
+                        if (scaledImage != null) { // 检查图片尺寸
                             RoundImage roundImg = new RoundImage(scaledImage);
                             iconPanel.add(roundImg, BorderLayout.NORTH);
-                            Container parent = roundImg.getParent();
-                            if (parent != null) {
-                                parent.revalidate();
-                                parent.repaint();
-                            }
+                            SwingUtilities.invokeLater(() -> {  // 在 EDT 中更新 UI
+                                topPanel.repaint();
+                                topPanel.updateUI();
+                            });
                         }
                     } catch (Exception e) {
                         // ... 处理错误
+                        System.out.println(e.getMessage());
                     }
                 }
             }.execute();
@@ -201,12 +201,15 @@ public class MessageComponent extends JBPanel<MessageComponent> {
 
         JPanel centerPanel = new JPanel(new BorderLayout());
 
-        JPanel messagePanel = new JPanel(new BorderLayout());
+        RoundPanel messagePanel = new RoundPanel();
         messagePanel.setLayout(new BoxLayout(messagePanel, BoxLayout.Y_AXIS));
         messagePanel.setOpaque(true);
         messagePanel.setMinimumSize(new Dimension(getMinimumSize().width,32));
         messagePanel.setBorder(JBUI.Borders.empty(6));
-        messagePanel.setBackground(isMe ? new JBColor(0xEAEEF7, 0x45494A) : new JBColor(0xE0EEF7, 0x2d2f30 /*2d2f30*/));
+
+        SwingUtilities.invokeLater(() -> {
+            messagePanel.setBackground(isMe ? new JBColor(Color.decode("#a5d6ff"),Color.decode("#b4d6ff")) : new JBColor(Color.decode("#5a6775"), Color.decode("#f1f1f1") /*2d2f30*/));
+        });
 
         Component messageTextarea = isMe ? new messageTextarea(content) : createTextPaneComponent(content);
         messagePanel.add(messageTextarea,BorderLayout.CENTER);
@@ -243,50 +246,55 @@ public class MessageComponent extends JBPanel<MessageComponent> {
         add(southPanel,BorderLayout.SOUTH); // 将 MainPanel 添加到中心
     }
 
-    public Component createContentComponent(String content) {
-        component.setEditable(false);
-        component.setContentType("text/html; charset=UTF-8");
-        component.putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, java.lang.Boolean.TRUE);
-        component.setOpaque(false);
-        component.setBorder(null);
-        component.addHyperlinkListener(new BrowserHyperlinkListener());
-
-        // 配置字体和样式
-        HTMLEditorKit kit = (HTMLEditorKit) component.getEditorKit();
-        StyleSheet styleSheet = kit.getStyleSheet();
-        styleSheet.importStyleSheet(cssResource);
-        component.setEditorKit(kit);
-
-        NotificationsUtil.configureHtmlEditorKit(component, true);
-        component.putClientProperty(AccessibleContext.ACCESSIBLE_NAME_PROPERTY, StringUtil.unescapeXmlEntities(StringUtil.stripHtml(content, " ")));
-
-        component.updateMessage(content);
-
-        component.setEditable(false);
-
-        if (component.getCaret() != null) {
-            component.setCaretPosition(0);
-        }
-
-        component.revalidate();
-        component.repaint();
-
-        return component;
-    }
+//    public Component createContentComponent(String content) {
+//        component.setEditable(false);
+//        component.setContentType("text/html; charset=UTF-8");
+//        component.putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, java.lang.Boolean.TRUE);
+//        component.setOpaque(false);
+//        component.setBorder(null);
+//        component.addHyperlinkListener(new BrowserHyperlinkListener());
+//
+//        // 配置字体和样式
+//        HTMLEditorKit kit = (HTMLEditorKit) component.getEditorKit();
+//        StyleSheet styleSheet = kit.getStyleSheet();
+//        styleSheet.importStyleSheet(cssResource);
+//        component.setEditorKit(kit);
+//
+//        NotificationsUtil.configureHtmlEditorKit(component, true);
+//        component.putClientProperty(AccessibleContext.ACCESSIBLE_NAME_PROPERTY, StringUtil.unescapeXmlEntities(StringUtil.stripHtml(content, " ")));
+//
+//        component.updateMessage(content);
+//
+//        component.setEditable(false);
+//
+//        if (component.getCaret() != null) {
+//            component.setCaretPosition(0);
+//        }
+//
+//        component.revalidate();
+//        component.repaint();
+//
+//        return component;
+//    }
 
     public JTextPane createTextPaneComponent(String content) {
         textPane = new JTextPane(); // 使用 JTextPane
         textPane.setContentType("text/html; charset=UTF-8");
-        textPane.setFont(JBUI.Fonts.create(Font.SANS_SERIF,stateStore.CHAT_PANEL_FONT_SIZE));
+        textPane.setForeground(JBColor.namedColor("Label.infoForeground", new JBColor(Color.decode("#f1f1f1"), Color.decode("#000000"))));
+        textPane.setFont(new Font("Microsoft YaHei", Font.PLAIN,stateStore.CHAT_PANEL_FONT_SIZE));
+        textPane.setMinimumSize(new Dimension(textPane.getPreferredSize().width,32));
         textPane.setEditable(false);
         textPane.setOpaque(false);
         textPane.setBorder(null);
         textPane.addHyperlinkListener(new BrowserHyperlinkListener());
 
         HTMLEditorKit kit = new HTMLEditorKit();
-        StyleSheet styleSheet = kit.getStyleSheet();
-        styleSheet.importStyleSheet(cssResource);
+//        StyleSheet styleSheet = kit.getStyleSheet();
+//        styleSheet.importStyleSheet(cssResource);
         textPane.setEditorKit(kit);
+
+//        String htmlContent = String.format("<body style=\"font-size: %spx; padding: 6px 12px; background-color: #f0f0f0; border-radius: 10px;\">%s</body>",
+//                stateStore.CHAT_PANEL_FONT_SIZE, HtmlUtil.md2html(content));
 
         NotificationsUtil.configureHtmlEditorKit(textPane, true);
         textPane.putClientProperty(AccessibleContext.ACCESSIBLE_NAME_PROPERTY, StringUtil.unescapeXmlEntities(StringUtil.stripHtml(content, " ")));
@@ -334,7 +342,8 @@ public class MessageComponent extends JBPanel<MessageComponent> {
             setEditable(false);
             setOpaque(false);
             setBorder(null);
-            setFont(JBUI.Fonts.create(Font.SANS_SERIF,stateStore.CHAT_PANEL_FONT_SIZE));
+            setForeground(JBColor.namedColor("Label.infoForeground", new JBColor(Color.decode("#ffffff"), Color.decode("#000000"))));
+            setFont(new Font("Microsoft YaHei", Font.PLAIN,stateStore.CHAT_PANEL_FONT_SIZE));
             setLineWrap(true);
             setWrapStyleWord(true);
             setText(content);
@@ -367,9 +376,9 @@ public class MessageComponent extends JBPanel<MessageComponent> {
         chatItemData.addProperty("status",status);
         timeLabel.setVisible(chatItemData.get("time").getAsLong() != 0 && status != 0 && status != 2);
         statusLabel.setVisible(chatItemData.get("time").getAsLong() != 0 && !chatItemData.get("isMe").getAsBoolean());
-        Color colorGray = Color.decode("#aaaaaa");
+        Color colorBlue = Color.decode("#4db2dd");
         Color colorRed = Color.decode("#dd524d");
-        Color setColor = status < 0 ? colorRed : colorGray;
+        Color setColor = status < 0 ? colorRed : colorBlue;
         statusLabel.setForeground(JBColor.namedColor("Label.infoForeground", new JBColor(setColor,setColor)));
         switch (status) {
             case 0:
@@ -446,7 +455,7 @@ public class MessageComponent extends JBPanel<MessageComponent> {
                 updateStatusContent(1);
                 break;
             case "error":
-                if (!component.getBody().isBlank() && !message.isJsonNull()) {
+                if (!textPane.getText().isBlank() && !message.isJsonNull()) {
                     try {
                         updateMessageContent(message.asMap().toString());
                     } catch (Exception e) {

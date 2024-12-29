@@ -38,7 +38,7 @@ public class AIAssistantSettingsState implements PersistentStateComponent<AIAssi
 
   public static final String[] promptsComboboxRolesString = {"user", "system", "assistant"};
 
-  public int CHAT_PANEL_FONT_SIZE = 12;
+  public int CHAT_PANEL_FONT_SIZE = 14;
 
   public String requestTimeout = "60000";
   public Boolean enableLineWarp = true;

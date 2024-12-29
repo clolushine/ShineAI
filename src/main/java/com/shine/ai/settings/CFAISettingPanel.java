@@ -51,10 +51,10 @@ public class CFAISettingPanel implements Configurable, Disposable {
         AIAssistantSettingsState state = AIAssistantSettingsState.getInstance();
 
         // 如果模型为空则刷新一下模型
+        assert modelsCombobox != null;
         if (state.CFModels.isEmpty()) {
             updateModels();
         } else {
-            assert modelsCombobox != null;
             modelsCombobox.setModel(modelsToComboBoxModel());
         }
 

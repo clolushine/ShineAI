@@ -31,7 +31,6 @@ public class MultilineInput extends JPanel {
         // 放在setting中设置
 //        textArea.setLineWrap(true); // 自动换行
 //        textArea.setWrapStyleWord(true); // 单词边界换行
-        textArea.setFont(JBUI.Fonts.create(Font.SANS_SERIF,12));
         textArea.setBorder(JBUI.Borders.empty(4,4,4,12));
 
         // 限制最大高度，超过则显示滚动条

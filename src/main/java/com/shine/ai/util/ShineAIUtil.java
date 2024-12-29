@@ -5,15 +5,11 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.intellij.openapi.actionSystem.ActionPlaces;
-import com.intellij.openapi.actionSystem.AnActionEvent;
-import com.intellij.openapi.actionSystem.DataContext;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.MessageDialogBuilder;
 import com.intellij.openapi.ui.MessageType;
-import com.shine.ai.message.MsgEntryBundle;
 import com.shine.ai.settings.AIAssistantSettingsState;
-import com.shine.ai.ui.action.SettingAction;
+import com.shine.ai.settings.LoginDialog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -152,14 +148,11 @@ public class ShineAIUtil {
             ) {
                 state.setUserInfo(new JsonObject());
                 state.UserToken = "";
-                boolean yes = MessageDialogBuilder.yesNo("登入过期", "身份信息过期，请到设置中AIAssistant中登入后重试")
+                boolean yes = MessageDialogBuilder.yesNo("登入过期", "身份信息过期，请登入后重试")
                         .yesText("是")
                         .noText("否").ask((Project) null);
                 if (yes) {
-                   SettingAction openSetting = new SettingAction(MsgEntryBundle.message("action.settings"));
-                    // 创建一个模拟的 AnActionEvent 对象
-                    AnActionEvent event = AnActionEvent.createFromAnAction(openSetting, null, ActionPlaces.UNKNOWN, DataContext.EMPTY_CONTEXT);
-                    openSetting.actionPerformed(event);
+                   new LoginDialog().openDialog();
                 }
                 return;
             }

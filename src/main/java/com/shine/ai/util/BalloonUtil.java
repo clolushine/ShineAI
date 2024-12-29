@@ -3,6 +3,7 @@ package com.shine.ai.util;
 import com.intellij.openapi.ui.MessageType;
 import com.intellij.openapi.ui.popup.Balloon;
 import com.intellij.openapi.ui.popup.JBPopupFactory;
+import com.intellij.ui.awt.RelativePoint;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
@@ -16,11 +17,12 @@ public class BalloonUtil {
                 .createHtmlTextBalloonBuilder(text, type.getDefaultIcon(), type.getPopupBackground(), null)
                 .setFadeoutTime(fadeoutTime)
                 .createBalloon();
+        balloon.show(RelativePoint.getCenterOf((JComponent) component), Balloon.Position.above);
         // 销毁balloon
         Timer timer = new Timer(fadeoutTime, new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                balloon.dispose();
+                SwingUtilities.invokeLater(balloon::dispose);
                 ((Timer)e.getSource()).stop(); //  停止 Timer，只执行一次
             }
         });

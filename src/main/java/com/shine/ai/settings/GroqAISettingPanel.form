@@ -188,7 +188,8 @@
                   <inheritsPopupMenu value="false"/>
                   <inverted value="false"/>
                   <majorTickSpacing value="25"/>
-                  <minimum value="10"/>
+                  <maximum value="100"/>
+                  <minimum value="0"/>
                   <minorTickSpacing value="5"/>
                   <paintLabels value="true"/>
                   <paintTicks value="true"/>

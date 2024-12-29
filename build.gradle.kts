@@ -7,9 +7,9 @@ plugins {
     // Java support
     id("java")
     // Kotlin support
-    id("org.jetbrains.kotlin.jvm") version "1.7.22"
+    id("org.jetbrains.kotlin.jvm") version "1.9.0"
     // Gradle IntelliJ Plugin
-    id("org.jetbrains.intellij") version "1.13.2"
+    id("org.jetbrains.intellij") version "1.17.4"
 }
 
 group = properties("pluginGroup")
@@ -31,11 +31,13 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.10.0")
     implementation("com.alibaba.fastjson2:fastjson2:2.0.20")
     implementation("com.squareup.okhttp3:okhttp-sse:4.10.0")
-    implementation("com.vladsch.flexmark:flexmark:0.62.2")
+    implementation("com.vladsch.flexmark:flexmark-all:0.62.2")
 }
 
 // Configure Gradle IntelliJ Plugin - read more: https://github.com/JetBrains/gradle-intellij-plugin
 intellij {
+//    localPath.set("D:\\Software\\IntelliJ IDEA Community Edition 2024.3")
+
     pluginName.set(properties("pluginName"))
     version.set(properties("platformVersion"))
     type.set(properties("platformType"))

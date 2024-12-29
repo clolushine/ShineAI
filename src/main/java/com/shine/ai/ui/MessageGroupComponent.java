@@ -118,6 +118,7 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
         inputTextArea.setMinimumSize(new Dimension(inputTextArea.getWidth(), inputTextArea.getPreferredSize().height));
         inputTextArea.getTextarea().setLineWrap(stateStore.enableLineWarp);
         inputTextArea.getTextarea().setWrapStyleWord(stateStore.enableLineWarp);
+        inputTextArea.getTextarea().setFont(new Font("Microsoft YaHei", Font.PLAIN,stateStore.CHAT_PANEL_FONT_SIZE));
 
         actionSouthPanel = new JPanel();
         actionSouthPanel.setLayout(new BoxLayout(actionSouthPanel, BoxLayout.X_AXIS));
@@ -176,9 +177,9 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
             // 创建扩展后的可见区域
             Rectangle extendedVisibleRect = new Rectangle(
                     visibleRect.x,
-                    visibleRect.y + 108,
+                    visibleRect.y + 124,
                     visibleRect.width,
-                    visibleRect.height - 144
+                    visibleRect.height - 160
             );
             for (int i = 0; i < myList.getComponentCount(); i++) {
                 Component component = myList.getComponent(i);

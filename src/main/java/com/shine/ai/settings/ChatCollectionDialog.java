@@ -14,6 +14,7 @@ import com.intellij.util.ui.UIUtil;
 import com.shine.ai.ui.IconButton;
 import com.shine.ai.ui.MainPanel;
 import com.shine.ai.ui.MyScrollPane;
+import com.shine.ai.ui.RoundPanel;
 import com.shine.ai.util.BalloonUtil;
 import com.shine.ai.util.FileUtil;
 import com.shine.ai.util.StringUtil;
@@ -163,7 +164,7 @@ public class ChatCollectionDialog extends JDialog {
             JPanel northLeftPanel = new JPanel(new BorderLayout());
             String titleLabelStr = collectionItem.get("collectionTitle").getAsString().isEmpty() ? "null" : StringUtil.stringEllipsis(collectionItem.get("collectionTitle").getAsString(),20);
             JLabel titleLabel = new JLabel(titleLabelStr);
-            titleLabel.setFont(JBUI.Fonts.create(null,13));
+            titleLabel.setFont(JBUI.Fonts.create("Microsoft YaHei",stateStore.CHAT_PANEL_FONT_SIZE + 1));
 
             JLabel timeLabel = new JLabel();
             timeLabel.setFont(JBUI.Fonts.smallFont());
@@ -185,12 +186,13 @@ public class ChatCollectionDialog extends JDialog {
             centerPanel.setOpaque(false);
             centerPanel.setBorder(JBUI.Borders.empty(6));
 
+            RoundPanel contentTextPanel = new RoundPanel(new BorderLayout());
+            contentTextPanel.setBackground(new JBColor(Color.decode("#5a6775"), Color.decode("#f1f1f1")));
             String contentTextAreaStr = collectionItem.get("collectionSubTitle").getAsString().isEmpty() ? "null" : StringUtil.stringEllipsis(collectionItem.get("collectionSubTitle").getAsString(), 192);
             LimitedTextAreaV contentTextArea = new LimitedTextAreaV(contentTextAreaStr);
-            contentTextArea.setBackground(new JBColor(0xE0EEF7, 0x2d2f30 /*2d2f30*/));
-            contentTextArea.setBorder(JBUI.Borders.empty(6));
+            contentTextPanel.add(contentTextArea);
 
-            centerPanel.add(contentTextArea,BorderLayout.CENTER);
+            centerPanel.add(contentTextPanel,BorderLayout.CENTER);
             add(centerPanel, BorderLayout.CENTER);
 
             JPanel actionPanel = new JPanel(new BorderLayout());
@@ -312,13 +314,15 @@ public class ChatCollectionDialog extends JDialog {
         }
     }
 
-    public static class LimitedTextAreaV extends JTextArea {
+    public class LimitedTextAreaV extends JTextArea {
         public LimitedTextAreaV(String content) {
-            super();
-            setLineWrap(true); // 启用自动换行
-            setWrapStyleWord(true); // 按单词换行
-            setEditable(false);
-            setEnabled(false);
+            setEditable(false); // 启用自动换行
+            setOpaque(false); // 按单词换行
+            setBorder(JBUI.Borders.empty(6));
+            setForeground(JBColor.namedColor("Label.infoForeground", new JBColor(Color.decode("#f1f1f1"), Color.decode("#000000"))));
+            setFont(new Font("Microsoft YaHei", Font.PLAIN,stateStore.CHAT_PANEL_FONT_SIZE));
+            setLineWrap(true);
+            setWrapStyleWord(true);
             setText(content);
         }
     }
@@ -335,7 +339,7 @@ public class ChatCollectionDialog extends JDialog {
         addChatTitledBorderBox.add(stBt,BorderLayout.CENTER);
 
         openChatTitledBorderBox = new JPanel(new BorderLayout());
-        TitledSeparator mdModel = new TitledSeparator("History Chat");
+        TitledSeparator mdModel = new TitledSeparator("History Chat Collection");
         openChatTitledBorderBox.add(mdModel,BorderLayout.CENTER);
     }
 

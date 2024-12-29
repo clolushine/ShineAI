@@ -358,6 +358,7 @@ public class ChatSettingDialog extends JDialog {
             add(roleSelect,BorderLayout.WEST);
 
             ExpandableTextField promptFiled = new ExpandableTextField();
+            promptFiled.setFont(new Font("Microsoft YaHei", Font.PLAIN,stateStore.CHAT_PANEL_FONT_SIZE));
             promptFiled.setText(promptItem.get("content").getAsString());
             promptFiled.setCaretPosition(0);
             // 添加监听器

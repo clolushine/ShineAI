@@ -48,7 +48,7 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
     private JLabel contentOrderHelpLabel;
     private JPanel userOptions;
     private JPanel userAuthPanel;
-    private JTextField UseremailField;
+    private JLabel UseremailField;
     private JPanel loginTitledBorderBox;
     private JLabel LastLoginTimeField;
     private JLabel UsernameField;
@@ -118,17 +118,18 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
 
         assert logoutButton != null;
         logoutButton.addActionListener(e -> {
-            String token = checkTokenExists();
-            if (StringUtil.isEmpty(token)) {
-                BalloonUtil.showBalloon("UserAuth is none. Please login before logout.",MessageType.WARNING,userAuthPanel);
-                return;
+            boolean yes = MessageDialogBuilder.yesNo("Are you sure you want to logout?",
+                            "There will be logout.")
+                    .yesText("Yes")
+                    .noText("No").ask(logoutButton);
+            if (yes) {
+                logoutButton.setLoading(true);
+                CompletableFuture.runAsync(() -> ShineAIUtil.logOutUser(logoutButton))
+                        .thenRun(() -> {
+                            logoutButton.setLoading(false);
+                            updateLoginUserInfo();
+                        });
             }
-            logoutButton.setLoading(true);
-            CompletableFuture.runAsync(() -> ShineAIUtil.logOutUser(logoutButton))
-                    .thenRun(() -> {
-                        logoutButton.setLoading(false);
-                        updateLoginUserInfo();
-                    });
         });
     }
 
@@ -282,6 +283,11 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
         loginButton.setEnabled(StringUtil.isEmpty(checkTokenExists()));
 
         logoutButton.setEnabled(!StringUtil.isEmpty(checkTokenExists()));
+
+        assert UseremailField != null;
+        if (!state.Useremail.isBlank()) {
+            UseremailField.setText(state.Useremail);
+        }
 
         assert LastLoginTimeField != null;
         if (state.getUserInfo().has("login_ts")) {

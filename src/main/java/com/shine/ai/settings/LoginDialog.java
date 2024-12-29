@@ -111,7 +111,7 @@ public class LoginDialog extends JDialog {
     public void openDialog() {
         SwingUtilities.invokeLater(() -> { // 在事件调度线程中执行
             LoginDialog dialog = new LoginDialog();
-            dialog.setTitle("Login：");
+            dialog.setTitle("Login：ShineAI");
 
             dialog.pack(); //  先调用 pack()
             dialog.setLocationRelativeTo(null);

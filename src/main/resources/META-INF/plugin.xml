@@ -1,7 +1,7 @@
 <idea-plugin>
   <id>ShineAI</id>
   <name>ShineAI</name>
-  <vendor email="shine4387@outlook.com" url="https://github.com/cloudshinezhong">shine</vendor>
+  <vendor email="shine4387@outlook.com" url="https://github.com/cloudshinezhong">ShineZhong</vendor>
 
   <depends>com.intellij.modules.platform</depends>
   <depends>org.intellij.plugins.markdown</depends>
