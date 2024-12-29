@@ -3,7 +3,6 @@ package com.shine.ai.ui.action;
 import com.intellij.icons.AllIcons;
 import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.AnActionEvent;
-import com.intellij.openapi.actionSystem.Presentation;
 import com.intellij.openapi.project.DumbAwareAction;
 import com.shine.ai.settings.ChatCollectionDialog;
 import org.jetbrains.annotations.NotNull;
@@ -26,8 +25,10 @@ public class ChatCollectionAction extends DumbAwareAction {
 
     @Override
     public void update(@NotNull AnActionEvent e) {
-        Presentation presentation = e.getPresentation();
-        presentation.setEnabled(enabled); // 使用 enabled 字段控制 enabled 状态
+        SwingUtilities.invokeLater(() -> {
+            // 重新更新 UI
+            e.getPresentation().setEnabled(this.enabled);
+        });
     }
 
     @Override
