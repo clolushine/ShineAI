@@ -177,7 +177,6 @@ public class MessageComponent extends JBPanel<MessageComponent> {
 
         actionPanel = new JPanel(new CardLayout());
         // 将 actions 添加到顶部（MainPanel 边框外部）
-        actionPanel.setOpaque(false);
 
         if (showActions)  initActions();
 

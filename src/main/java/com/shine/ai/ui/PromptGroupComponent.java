@@ -46,12 +46,12 @@ public class PromptGroupComponent extends JBPanel<PromptGroupComponent> implemen
         ThisMainPanel = mainP;
         AIVendorSet = settingPanel;
 
-        setBorder(JBUI.Borders.empty());
         setLayout(new BorderLayout());
+        setOpaque(true);
+        setBorder(JBUI.Borders.empty());
         setBackground(new JBColor(0xEAEEF7, 0x45494A));
 
         JPanel mainPanel = new JPanel(new BorderLayout());
-        mainPanel.setOpaque(false);
 
         add(mainPanel,BorderLayout.CENTER);
 

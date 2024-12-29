@@ -111,7 +111,7 @@ public class ChatCollectionDialog extends JDialog {
                 parentSize = _component.getParent().getSize(); //Try to get size from parent.  Could still be 0,0.
             }
 
-            dialog.setPreferredSize(new Dimension(getMinimumSize().width,(int) (parentSize.height * 0.8)));
+            dialog.setPreferredSize(new Dimension(getMinimumSize().width, (int) (parentSize.height * 0.88)));
             dialog.pack(); //  先调用 pack()
             dialog.setLocationRelativeTo(_component);
             dialog.setVisible(true);

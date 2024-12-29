@@ -80,8 +80,9 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
 
         SendListener listener = new SendListener(ThisMainPanel);
 
-        setBorder(JBUI.Borders.empty());
         setLayout(new BorderLayout());
+        setOpaque(true);
+        setBorder(JBUI.Borders.empty());
         setBackground(UIUtil.getListBackground());
 
         JPanel mainPanel = new JPanel(new BorderLayout());
