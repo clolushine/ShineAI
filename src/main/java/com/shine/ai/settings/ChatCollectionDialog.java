@@ -187,7 +187,7 @@ public class ChatCollectionDialog extends JDialog {
             centerPanel.setBorder(JBUI.Borders.empty(6));
 
             RoundPanel contentTextPanel = new RoundPanel(new BorderLayout());
-            contentTextPanel.setBackground(new JBColor(Color.decode("#5a6775"), Color.decode("#f1f1f1")));
+            contentTextPanel.setBackground(new JBColor(Color.decode("#f1f1e1"), Color.decode("#f1f1f1")));
             String contentTextAreaStr = collectionItem.get("collectionSubTitle").getAsString().isEmpty() ? "null" : StringUtil.stringEllipsis(collectionItem.get("collectionSubTitle").getAsString(), 192);
             LimitedTextAreaV contentTextArea = new LimitedTextAreaV(contentTextAreaStr);
             contentTextPanel.add(contentTextArea);
@@ -317,7 +317,7 @@ public class ChatCollectionDialog extends JDialog {
             setEditable(false); // 启用自动换行
             setOpaque(false); // 按单词换行
             setBorder(JBUI.Borders.empty(6));
-            setForeground(JBColor.namedColor("Label.infoForeground", new JBColor(Color.decode("#f1f1f1"), Color.decode("#000000"))));
+            setForeground(JBColor.namedColor("Label.infoForeground", new JBColor(Color.decode("#ffffff"), Color.decode("#000000"))));
             setFont(new Font("Microsoft YaHei", Font.PLAIN,stateStore.CHAT_PANEL_FONT_SIZE));
             setLineWrap(true);
             setWrapStyleWord(true);

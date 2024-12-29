@@ -207,7 +207,7 @@ public class MessageComponent extends JBPanel<MessageComponent> {
         messagePanel.setBorder(JBUI.Borders.empty(6));
 
         SwingUtilities.invokeLater(() -> {
-            messagePanel.setBackground(isMe ? new JBColor(Color.decode("#a5d6ff"),Color.decode("#b4d6ff")) : new JBColor(Color.decode("#5a6775"), Color.decode("#f1f1f1") /*2d2f30*/));
+            messagePanel.setBackground(isMe ? new JBColor(Color.decode("#a5d6ff"),Color.decode("#b4d6ff")) : new JBColor(Color.decode("#f1f1e1"), Color.decode("#f1f1f1") /*2d2f30*/));
         });
 
         Component messageTextarea = isMe ? new messageTextarea(content) : createTextPaneComponent(content);
@@ -279,7 +279,7 @@ public class MessageComponent extends JBPanel<MessageComponent> {
     public JTextPane createTextPaneComponent(String content) {
         textPane = new JTextPane(); // 使用 JTextPane
         textPane.setContentType("text/html; charset=UTF-8");
-        textPane.setForeground(JBColor.namedColor("Label.infoForeground", new JBColor(Color.decode("#f1f1f1"), Color.decode("#000000"))));
+        textPane.setForeground(JBColor.namedColor("Label.infoForeground", new JBColor(Color.decode("#ffffff"), Color.decode("#000000"))));
         textPane.setFont(new Font("Microsoft YaHei", Font.PLAIN,stateStore.CHAT_PANEL_FONT_SIZE));
         textPane.setMinimumSize(new Dimension(textPane.getPreferredSize().width,32));
         textPane.setEditable(false);
@@ -341,7 +341,7 @@ public class MessageComponent extends JBPanel<MessageComponent> {
             setEditable(false);
             setOpaque(false);
             setBorder(null);
-            setForeground(JBColor.namedColor("Label.infoForeground", new JBColor(Color.decode("#ffffff"), Color.decode("#000000"))));
+            setForeground(JBColor.namedColor("Label.infoForeground", new JBColor(Color.decode("#f1f1f1"), Color.decode("#000000"))));
             setFont(new Font("Microsoft YaHei", Font.PLAIN,stateStore.CHAT_PANEL_FONT_SIZE));
             setLineWrap(true);
             setWrapStyleWord(true);
