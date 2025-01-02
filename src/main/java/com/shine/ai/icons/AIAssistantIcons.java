@@ -11,7 +11,7 @@ public class AIAssistantIcons {
     public static String CF_AI_PATH = "/images/cfai.jpg";
     public static String GOOGLE_AI_PATH = "/images/googleai.png";
     public static String GROQ_AI_PATH = "/images/groqai.jpg";
-    public static String TOOL_WINDOW_PATH = "/icons/toolWindow.svg";
+    public static String TOOL_WINDOW_PATH = "/icons/toolWindow.png";
 
     public static String ME_URL = "https://res.cloudinary.com/dqasscgat/image/upload/v1714913344/unishine/wntnvdqakg3loerrni2c.jpg";
     public static String AI_URL = "https://res.cloudinary.com/dqasscgat/image/upload/v1714915030/unishine/xnqodglm3qsgqkht8bzp.png";

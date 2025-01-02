@@ -1,8 +1,8 @@
 package com.shine.ai.ui;
 
 import com.intellij.ui.components.IconLabelButton;
+import com.intellij.util.ui.ImageUtil;
 import com.intellij.util.ui.JBUI;
-import com.intellij.util.ui.UIUtil;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
@@ -26,7 +26,7 @@ public class IconButton extends JPanel {
     private final ArrayList<ActionListener> listeners = new ArrayList<>();
 
     public IconButton(String text,@NotNull Icon icon) {
-        setOpaque(true);
+        setOpaque(false);
 
         this.buttonIcon = icon;
 
@@ -36,6 +36,7 @@ public class IconButton extends JPanel {
 
         // 存储 button 实例
         button = new IconLabelButton(icon, component1 -> null);
+        button.setDisabledIcon(adjustTransparency(icon,0.3f));
         button.setPreferredSize(new Dimension(width, height));
         button.setBorder(JBUI.Borders.empty());
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -55,38 +56,41 @@ public class IconButton extends JPanel {
     @Override  //  正确重写 setEnabled 方法
     public void setEnabled(boolean enabled) {
         super.setEnabled(enabled); // 调用父类的 setEnabled 方法
-//        button.setEnabled(enabled);
-        if (enabled) {
-            // 启用状态，使用原始图标
-            button.setIcon(buttonIcon);
-
-
-        } else {
-            // 禁用状态，使用灰度图标
-            Icon grayIcon = createGrayIcon(buttonIcon);
-            button.setIcon(grayIcon);
-        }
+        button.setEnabled(enabled);
     }
 
     public void setIcon(Icon icon) {
-        button.setIcon(icon);
         buttonIcon = icon;
+        button.setIcon(buttonIcon);
     }
 
-    private static Icon createGrayIcon(Icon icon) {
+    private Icon createGrayIcon(Icon icon) {
         // 创建灰度过滤器
-        ImageFilter filter = new GrayFilter(true, 10); //  50 是灰度级别，可以根据需要调整
+        ImageFilter filter = new GrayFilter(true, 20); //  50 是灰度级别，可以根据需要调整
         // 使用过滤器创建新的图标
         ImageProducer producer = new FilteredImageSource(getIconImage(icon).getSource(), filter);
         return new ImageIcon(Toolkit.getDefaultToolkit().createImage(producer));
     }
 
-    private static Image getIconImage(Icon icon) {
+    public Icon adjustTransparency(Icon icon, float alpha) {
+        BufferedImage image = (BufferedImage) getIconImage(icon);
+        if (image == null) return icon; //处理无法转换的情况
+        int width = image.getWidth();
+        int height = image.getHeight();
+        BufferedImage result = ImageUtil.createImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2d = result.createGraphics();
+        g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
+        g2d.drawImage(image, 0, 0, null);
+        g2d.dispose();
+        return new ImageIcon(ImageUtil.scaleImage(result,buttonIcon.getIconWidth() - 2,buttonIcon.getIconHeight() - 2));
+    }
+
+    private Image getIconImage(Icon icon) {
         if (icon instanceof ImageIcon) {
             return ((ImageIcon) icon).getImage();
         } else {
             // 如果不是 ImageIcon，则手动绘制图标到 Image
-            BufferedImage image = UIUtil.createImage(icon.getIconWidth(), icon.getIconHeight(), BufferedImage.TYPE_INT_ARGB);
+            BufferedImage image = ImageUtil.createImage(icon.getIconWidth(), icon.getIconHeight(), BufferedImage.TYPE_INT_ARGB);
             Graphics g = image.getGraphics();
             icon.paintIcon(null, g, 0, 0);
             g.dispose();

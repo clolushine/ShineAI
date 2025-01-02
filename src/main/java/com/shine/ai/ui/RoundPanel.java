@@ -9,10 +9,14 @@ public class RoundPanel extends JComponent {
     private int arcHeight = 8;
 
     public RoundPanel(BorderLayout borderLayout) {
+        super();
+        setOpaque(true); // 关键修改：确保面板不透明
         setLayout(borderLayout);
     }
 
-    public RoundPanel() {}
+    public RoundPanel() {
+        setOpaque(true); // 关键修改：确保面板不透明
+    }
 
     public void setArc(int arcWidth, int arcHeight) {
         this.arcWidth = arcWidth;
@@ -20,16 +24,11 @@ public class RoundPanel extends JComponent {
         repaint(); // 重新绘制
     }
 
-//    @Override
-//    public void setBackground(Color bg) {
-//        super.setBackground(bg);
-//        repaint();
-//    }
-
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g.create();
+
         g2.setColor(getBackground()); // 使用面板的背景颜色
 
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);

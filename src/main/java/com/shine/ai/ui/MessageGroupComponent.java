@@ -148,7 +148,7 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
         init();
 
         infoTopPanel.setOpaque(true);
-        Border infoTopOuterBorder = BorderFactory.createMatteBorder(0, 0, 1, 0, new JBColor(new Color(0x2B2B2B), new Color(0x2B2B2B))); // 使用背景颜色
+        Border infoTopOuterBorder = BorderFactory.createMatteBorder(0, 0, 1, 0, new JBColor(Color.lightGray, Color.black)); // 使用背景颜色
         Border infoTopInnerBorder = JBUI.Borders.empty(12,20);
         Border compoundBorder = BorderFactory.createCompoundBorder(infoTopOuterBorder,infoTopInnerBorder);
         infoTopPanel.setBorder(compoundBorder);
@@ -178,17 +178,17 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
             // 创建扩展后的可见区域
             Rectangle extendedVisibleRect = new Rectangle(
                     visibleRect.x,
-                    visibleRect.y + 124,
+                    visibleRect.y + 32,
                     visibleRect.width,
-                    visibleRect.height - 160
+                    visibleRect.height - 64
             );
             for (int i = 0; i < myList.getComponentCount(); i++) {
                 Component component = myList.getComponent(i);
-                if (component instanceof MessageComponent) {
-                    MessageComponent messageComponent = (MessageComponent) component;
+                if (component instanceof MessageComponent messageComponent) {
                     Rectangle panelBounds = messageComponent.getBounds();
+                    Rectangle actionsPanel = new Rectangle(panelBounds.x,panelBounds.y,panelBounds.width,32);
                     // 检查组件是否在显示区域内
-                    boolean isVisible = extendedVisibleRect.intersects(panelBounds);
+                    boolean isVisible = extendedVisibleRect.intersects(actionsPanel);
                     CardLayout cl = (CardLayout)(messageComponent.actionPanel.getLayout());
                     cl.show(messageComponent.actionPanel, isVisible ? "messageActions":"placeholder");
                 }
@@ -219,8 +219,7 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
     public void setItemsDisabledRerunAndTrash(Boolean disabled) {
         for (int i = 0; i < myList.getComponentCount(); i++) { // 从后往前循环
             Component component = myList.getComponent(i);
-            if (component instanceof MessageComponent) {
-                MessageComponent messageComponent = (MessageComponent) component;
+            if (component instanceof MessageComponent messageComponent) {
                 messageComponent.messageActions.setDisabledRerunAndTrash(disabled);
             }
         }
@@ -229,8 +228,7 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
     public void setItemsDisabled(Boolean disabled) {
         for (int i = 0; i < myList.getComponentCount(); i++) { // 从后往前循环
             Component component = myList.getComponent(i);
-            if (component instanceof MessageComponent) {
-                MessageComponent messageComponent = (MessageComponent) component;
+            if (component instanceof MessageComponent messageComponent) {
                 messageComponent.messageActions.setDisabled(disabled);
             }
         }
@@ -266,8 +264,7 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
         }
         for (int i = 0; i < myList.getComponentCount(); i++) {
             Component component = myList.getComponent(i);
-            if (component instanceof MessageComponent) {
-                MessageComponent messageComponent = (MessageComponent) component;
+            if (component instanceof MessageComponent messageComponent) {
                 if (StringUtil.equals(messageComponent.chatId, chatId)) {
                     comp = messageComponent;
                     break;
@@ -280,8 +277,7 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
     public void modifyListItemInfo(JsonObject chatItemInfo) {
         for (int i = 0; i < myList.getComponentCount(); i++) {
             Component component = myList.getComponent(i);
-            if (component instanceof MessageComponent) {
-                MessageComponent messageComponent = (MessageComponent) component;
+            if (component instanceof MessageComponent messageComponent) {
                 JsonObject imf = chatList.stream()
                         .filter(item -> StringUtil.equals(item.get("chatId").getAsString(), chatItemInfo.get("chatId").getAsString()))
                         .findFirst().orElse(null);
@@ -570,14 +566,14 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
         progressBar.setVisible(status);
         button.setEnabled(!status);
         if (status) {
-            this.addScrollListener();
+//            this.addScrollListener();
             setItemsDisabledRerunAndTrash(true);
             disabledCollectionAction(true);
             chatSettingButton.setEnabled(false);
             actionSouthPanel.remove(button);
             actionSouthPanel.add(stopGenerating,BorderLayout.EAST);
         } else {
-            this.removeScrollListener();
+//            this.removeScrollListener();
             getExecutorService().shutdown();
             setItemsDisabled(false);
             disabledCollectionAction(false);

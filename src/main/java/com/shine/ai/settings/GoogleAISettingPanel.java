@@ -183,7 +183,7 @@ public class GoogleAISettingPanel implements  Configurable, Disposable {
         String notifyString = !cfModels.isEmpty() ? String.format("模型已刷新,新增%s条", afterLength - beforeLength) : "未获取到AI模型";
         MessageType notifyColor = !cfModels.isEmpty() ? MessageType.INFO : MessageType.WARNING;
         BalloonUtil.showBalloon(notifyString,notifyColor,modelsCombobox);
-        state.GOModels = cfModels;
+        if (!cfModels.isEmpty()) state.GOModels = cfModels;
         modelsCombobox.setModel(modelsToComboBoxModel());
         modelsCombobox.setSelectedItem(state.GOCurrentModel);
     }

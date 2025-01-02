@@ -25,10 +25,7 @@ public class ChatCollectionAction extends DumbAwareAction {
 
     @Override
     public void update(@NotNull AnActionEvent e) {
-        SwingUtilities.invokeLater(() -> {
-            // 重新更新 UI
-            e.getPresentation().setEnabled(this.enabled);
-        });
+        e.getPresentation().setEnabled(this.enabled);
     }
 
     @Override

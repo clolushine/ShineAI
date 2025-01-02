@@ -12,7 +12,7 @@ public class RoundImage extends JComponent {
 
     public RoundImage(Image image) {
         this.image = image;
-        setOpaque(false);
+        setOpaque(true);
     }
 
     public void setArc(int arcWidth, int arcHeight) {

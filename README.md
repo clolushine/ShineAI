@@ -1,6 +1,6 @@
 # ShinaAI
 
-下载插件: 首先，你需要从 JetBrains 插件仓库 (https://plugins.jetbrains.com/) 或其他来源下载插件的 zip 文件或 jar 文件。
+下载插件: 首先，你需要下载插件的 zip 文件或 jar 文件。
 
 打开插件设置: 在 IntelliJ IDEA 中，打开 "Settings/Preferences" (快捷键通常是 Ctrl+Alt+S 或 Cmd+,).
 

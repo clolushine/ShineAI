@@ -1,6 +1,7 @@
 package com.shine.ai.settings;
 
 import cn.hutool.core.swing.clipboard.ClipboardUtil;
+import com.intellij.ide.BrowserUtil;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ex.ApplicationManagerEx;
@@ -11,6 +12,7 @@ import com.intellij.openapi.ui.MessageType;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.ui.TitledSeparator;
 import com.intellij.ui.components.JBTextField;
+import com.intellij.ui.components.labels.LinkLabel;
 import com.intellij.util.messages.MessageBusConnection;
 import com.intellij.util.ui.JBUI;
 import com.intellij.util.ui.UIUtil;
@@ -62,9 +64,11 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
     private JPanel loginPanel;
     private JPanel logoutPanel;
     private JSpinner dialogFontSizeSpinner;
+    private JPanel signPanel;
 
     private LoadingButton logoutButton;
     private LoadingButton loginButton;
+    private LinkLabel<String> signLink;
 
     private final String[] comboboxItemsString = {
             CLOUDFLARE_AI_CONTENT_NAME,
@@ -75,6 +79,7 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
     public static final String SHINE_AI_BASE_URL = "https://34343433.xyz";
 
     public AIAssistantSettingsPanel() {
+        createSignLink();
         createUserAuthButton();
         init();
     }
@@ -108,6 +113,14 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
                     ClipboardUtil.setStr(UserIDField.getText());
                     BalloonUtil.showBalloon("Copy successfully", MessageType.INFO,UserIDField);
                 }
+            }
+        });
+
+        assert signLink != null;
+        signLink.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                BrowserUtil.browse("https://unishine.pages.dev/#/pages/login/register");
             }
         });
 
@@ -217,7 +230,7 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
         strings.add(firstSelected);
         strings.add(secondSelected);
         strings.add(thirdSelected);
-        List<String> collect = strings.stream().distinct().collect(Collectors.toList());
+        List<String> collect = strings.stream().distinct().toList();
         if (collect.size() != strings.size()) {
             MessageDialogBuilder.yesNo("Duplicate Content exists!", "The content of " +
                             "each position must be unique, please re-adjust the order")
@@ -257,6 +270,12 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
         logoutButton = new LoadingButton("logout");
         loginPanel.add(loginButton);
         logoutPanel.add(logoutButton);
+    }
+
+    private void createSignLink() {
+        signLink = new LinkLabel<>("Sign in",null);
+        signLink.setBorder(JBUI.Borders.empty(12));
+        signPanel.add(signLink);
     }
 
     private void createUIComponents() {

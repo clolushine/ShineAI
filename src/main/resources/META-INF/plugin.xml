@@ -7,7 +7,7 @@
   <depends>org.intellij.plugins.markdown</depends>
 
   <extensions defaultExtensionNs="com.intellij">
-    <toolWindow id="ShineAI" anchor="right" icon="/icons/toolWindow.svg" canCloseContents="true"
+    <toolWindow id="ShineAI" anchor="right" icon="/icons/toolWindow.png" canCloseContents="true"
                 factoryClass="com.shine.ai.MyToolWindowFactory"/>
     <applicationConfigurable parentId="tools" instance="com.shine.ai.settings.AIAssistantSettingsPanel"
                              id="com.shine.ai.settings.AIAssistantSettings"

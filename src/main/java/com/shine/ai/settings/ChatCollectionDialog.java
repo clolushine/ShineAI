@@ -27,7 +27,6 @@ import javax.swing.event.DocumentListener;
 import javax.swing.text.*;
 import java.awt.*;
 import java.awt.event.*;
-import java.nio.file.Path;
 import java.util.Objects;
 
 import static com.shine.ai.MyToolWindowFactory.ACTIVE_CONTENT;
@@ -131,11 +130,11 @@ public class ChatCollectionDialog extends JDialog {
 
     public void addNewChat(JComponent _component) {
         if (stateStore.AIChatCollection.size() >= 99) {
-            BalloonUtil.showBalloon("无法再新增聊天，请先删除旧的聊天", MessageType.ERROR,_component);
+            BalloonUtil.showBalloon("Cannot add more chat collection,\nPlease delete previous chat collection at first.", MessageType.ERROR,_component);
         }
         stateStore.AIChatCollection.add(0,stateStore.createChatCollection());
         // 创建元素，插入第一个
-        BalloonUtil.showBalloon("新增聊天成功",MessageType.INFO,_component);
+        BalloonUtil.showBalloon("Add chat collection successfully",MessageType.INFO,_component);
     }
 
     public void createHistoryList() {

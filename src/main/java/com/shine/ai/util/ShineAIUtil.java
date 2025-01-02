@@ -148,9 +148,9 @@ public class ShineAIUtil {
             ) {
                 state.setUserInfo(new JsonObject());
                 state.UserToken = "";
-                boolean yes = MessageDialogBuilder.yesNo("登入过期", "身份信息过期，请登入后重试")
-                        .yesText("是")
-                        .noText("否").ask((Project) null);
+                boolean yes = MessageDialogBuilder.yesNo("Token expired", "Login info expired,Please login and try again.")
+                        .yesText("Yes")
+                        .noText("No").ask((Project) null);
                 if (yes) {
                    new LoginDialog().openDialog();
                 }
@@ -170,18 +170,11 @@ public class ShineAIUtil {
     public static String[] getAIModels(String vendor,JComponent component) {
         JsonObject params = new JsonObject();
         String[] models = {};
-        String URL;
-        switch (vendor) {
-            case "GoogleAI":
-                URL = "/gem/gems";
-                break;
-            case "GroqAI":
-                URL = "/gpt/models";
-                break;
-            default:
-                URL = "/ai/aiModels";
-                break;
-        }
+        String URL = switch (vendor) {
+            case "GoogleAI" -> "/gem/gems";
+            case "GroqAI" -> "/gpt/models";
+            default -> "/ai/aiModels";
+        };
         if (state.getUserInfo().has("id")) {
             params.addProperty("uid",state.getUserInfo().get("id").getAsString());
         }

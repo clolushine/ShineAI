@@ -12,6 +12,7 @@ import com.shine.ai.settings.CFAISettingPanel;
 import com.shine.ai.settings.GoogleAISettingPanel;
 import com.shine.ai.settings.GroqAISettingPanel;
 import com.shine.ai.ui.action.ChatCollectionAction;
+import com.shine.ai.ui.action.GitHubAction;
 import com.shine.ai.ui.action.SettingAction;
 import com.shine.ai.util.StringUtil;
 import org.jetbrains.annotations.NotNull;
@@ -112,6 +113,7 @@ public class MyToolWindowFactory implements ToolWindowFactory {
 
         List<AnAction> actionList = new ArrayList<>();
         actionList.add(chatCollectionAction);
+        actionList.add(new GitHubAction());
         actionList.add(new SettingAction(MsgEntryBundle.message("action.settings")));
         toolWindow.setTitleActions(actionList);
     }
@@ -131,6 +133,7 @@ public class MyToolWindowFactory implements ToolWindowFactory {
 
     public static void disabledCollectionAction(Boolean disable) {
         if (chatCollectionAction != null) {
+            // 重新更新 UI
             chatCollectionAction.setEnabled(!disable); // 禁用 action
         }
     }

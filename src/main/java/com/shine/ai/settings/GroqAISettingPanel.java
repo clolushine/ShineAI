@@ -182,7 +182,7 @@ public class GroqAISettingPanel implements Configurable, Disposable {
         String notifyString = !cfModels.isEmpty() ? String.format("模型已刷新,新增%s条", afterLength - beforeLength) : "未获取到AI模型";
         MessageType notifyColor = !cfModels.isEmpty() ? MessageType.INFO : MessageType.WARNING;
         BalloonUtil.showBalloon(notifyString,notifyColor,modelsCombobox);
-        state.GRModels = cfModels;
+        if (!cfModels.isEmpty()) state.GRModels = cfModels;
         modelsCombobox.setModel(modelsToComboBoxModel());
         modelsCombobox.setSelectedItem(state.GRCurrentModel);
     }

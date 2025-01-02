@@ -9,8 +9,6 @@ import com.intellij.util.ui.JBUI;
 import com.shine.ai.core.SendAction;
 import com.shine.ai.util.BalloonUtil;
 import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import java.awt.*;
@@ -40,7 +38,7 @@ public class MessageActionsComponent extends JPanel {
         String chatId = chatItem.get("chatId").getAsString();
 
         setDoubleBuffered(true);
-        setOpaque(false);
+        setOpaque(true);
         setBorder(JBUI.Borders.empty());
 
         FlowLayout flowLayout = new FlowLayout(FlowLayout.LEFT);
@@ -87,7 +85,7 @@ public class MessageActionsComponent extends JPanel {
                 getMainPanel().getPromptsPanel().delete(chatItem.get("chatId").getAsString(),component);
             }else {
                 if (getMainPanel().getContentPanel().AIPrompts.size() >=9 ) {
-                    BalloonUtil.showBalloon("无法再添加提示词！！！", MessageType.ERROR,component);
+                    BalloonUtil.showBalloon("Cannot add more prompt！！！", MessageType.ERROR,component);
                     return;
                 }
                 getMainPanel().getContentPanel().addPin(chatItem,component);

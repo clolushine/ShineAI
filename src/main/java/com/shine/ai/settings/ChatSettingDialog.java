@@ -414,7 +414,7 @@ public class ChatSettingDialog extends JDialog {
     public void addNewPrompt(JComponent _component) {
         AIAssistantSettingsState stateStore = AIAssistantSettingsState.getInstance();
         if (thisPrompts.size() >= 9) {
-            BalloonUtil.showBalloon("无法再添加提示词！！！", MessageType.ERROR,promptsListPanel);
+            BalloonUtil.showBalloon("Cannot add more prompt！！！", MessageType.ERROR,promptsListPanel);
             return;
         }
         JsonObject prompt = new JsonObject();

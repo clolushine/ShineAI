@@ -14,8 +14,6 @@ import com.shine.ai.settings.AIAssistantSettingsState;
 import com.shine.ai.util.HtmlUtil;
 import com.shine.ai.util.StringUtil;
 import com.shine.ai.util.TimeUtil;
-//import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
-//import org.fife.ui.rtextarea.RTextScrollPane;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,11 +39,7 @@ public class MessageComponent extends JBPanel<MessageComponent> {
 
 //    private final MessagePanel component = new MessagePanel();
 
-    private final URL cssResource;
-
     private JTextPane textPane;
-
-//    private final RSyntaxTextAreaComponent RSyntaxPanel = new RSyntaxTextAreaComponent();
 
     public MessageActionsComponent messageActions;
 
@@ -73,8 +67,6 @@ public class MessageComponent extends JBPanel<MessageComponent> {
         this.msgGroupComp = msgGroupComp;
 
         this.chatItemData = chatItem;
-
-        this.cssResource = getClass().getResource("/css/darcula.min.css");
 
         setDoubleBuffered(true);
         setOpaque(true);
@@ -138,12 +130,8 @@ public class MessageComponent extends JBPanel<MessageComponent> {
                     try {
                         imageIcon = new ImageIcon(new URL(avatar));
                     } catch (Exception e) {
-                        imageIcon = isMe ? new ImageIcon(new URL(AIAssistantIcons.ME_URL)) : new ImageIcon(new URL(AIAssistantIcons.AI_URL));
+                        imageIcon = isMe ? new ImageIcon(new URL((AIAssistantIcons.ME_URL))) : new ImageIcon(new URL(AIAssistantIcons.AI_URL));
                     }
-//                    // 确保图片加载完成 (如果需要)
-//                    if (imageIcon.getImageLoadStatus() != MediaTracker.COMPLETE) {
-//                        return null;
-//                    }
                     return ImageLoader.scaleImage(imageIcon.getImage(), 32, 32);  // 在后台线程缩放图片
                 }
                 @Override
@@ -202,12 +190,13 @@ public class MessageComponent extends JBPanel<MessageComponent> {
 
         RoundPanel messagePanel = new RoundPanel();
         messagePanel.setLayout(new BoxLayout(messagePanel, BoxLayout.Y_AXIS));
-        messagePanel.setOpaque(true);
+        messagePanel.setOpaque(false);
         messagePanel.setMinimumSize(new Dimension(getMinimumSize().width,32));
         messagePanel.setBorder(JBUI.Borders.empty(6));
 
         SwingUtilities.invokeLater(() -> {
-            messagePanel.setBackground(isMe ? new JBColor(Color.decode("#a5d6ff"),Color.decode("#b4d6ff")) : new JBColor(Color.decode("#f1f1e1"), Color.decode("#f1f1f1") /*2d2f30*/));
+            if (isMe) messagePanel.setBackground(new JBColor(Color.decode("#a5d6ff"),Color.decode("#b4d6ff")));
+//            else messagePanel.setBackground(new JBColor(Color.decode("#f1f1e1"), Color.decode("#f1f1f1")));
         });
 
         Component messageTextarea = isMe ? new messageTextarea(content) : createTextPaneComponent(content);
@@ -279,29 +268,26 @@ public class MessageComponent extends JBPanel<MessageComponent> {
     public JTextPane createTextPaneComponent(String content) {
         textPane = new JTextPane(); // 使用 JTextPane
         textPane.setContentType("text/html; charset=UTF-8");
-        textPane.setForeground(JBColor.namedColor("Label.infoForeground", new JBColor(Color.decode("#ffffff"), Color.decode("#000000"))));
+//        textPane.setForeground(JBColor.namedColor("Label.infoForeground", new JBColor(Color.decode("#f1f1f1"), Color.decode("#000000"))));
         textPane.setFont(new Font("Microsoft YaHei", Font.PLAIN,stateStore.CHAT_PANEL_FONT_SIZE));
-        textPane.setMinimumSize(new Dimension(textPane.getPreferredSize().width,32));
         textPane.setEditable(false);
         textPane.setOpaque(false);
         textPane.setBorder(null);
         textPane.addHyperlinkListener(new BrowserHyperlinkListener());
-
-        HTMLEditorKit kit = new HTMLEditorKit();
-//        StyleSheet styleSheet = kit.getStyleSheet();
-//        styleSheet.importStyleSheet(cssResource);
-        textPane.setEditorKit(kit);
-
-//        String htmlContent = String.format("<body style=\"font-size: %spx; padding: 6px 12px; background-color: #f0f0f0; border-radius: 10px;\">%s</body>",
-//                stateStore.CHAT_PANEL_FONT_SIZE, HtmlUtil.md2html(content));
-
         NotificationsUtil.configureHtmlEditorKit(textPane, true);
-        textPane.putClientProperty(AccessibleContext.ACCESSIBLE_NAME_PROPERTY, StringUtil.unescapeXmlEntities(StringUtil.stripHtml(content, " ")));
+
+        HTMLEditorKit kit = (HTMLEditorKit) textPane.getEditorKit();
+        StyleSheet styleSheet = kit.getStyleSheet();
+        styleSheet.addRule("body{ padding: 0;margin:0; }");
+//        styleSheet.importStyleSheet(getClass().getResource("/css/darcula.min.css"););
+
+        String htmlContent = String.format("<div class=\"content\">%s</div>", HtmlUtil.md2html(content));
+        styleSheet.addRule(".content{padding: 6px 10px; color: #000000; background-color: #f1f1f1; border-radius: 12px; }");
 
         StyledDocument doc = textPane.getStyledDocument();
 
         try {
-            kit.insertHTML((HTMLDocument) doc, doc.getLength(), HtmlUtil.md2html(content), 0, 0, null);
+            kit.insertHTML((HTMLDocument) doc, doc.getLength(), htmlContent, 0, 0, null);
         } catch (BadLocationException | IOException e) {
             // 处理异常，例如打印错误信息或显示默认内容
             textPane.setText("Error rendering content: " + e.getMessage());
@@ -311,40 +297,21 @@ public class MessageComponent extends JBPanel<MessageComponent> {
 
         return textPane; // 返回 JTextPane
     }
-//
-//    public RSyntaxTextArea RSyntaxComponent(String content) {
-//        RSyntaxPanel.textArea.setFont(JBUI.Fonts.create(Font.SANS_SERIF,stateStore.CHAT_PANEL_FONT_SIZE));
-//        RSyntaxPanel.textArea.putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, java.lang.Boolean.TRUE);
-//        RSyntaxPanel.textArea.setOpaque(false);
-//        RSyntaxPanel.textArea.setBorder(null);
-//        RSyntaxPanel.textArea.addHyperlinkListener(new BrowserHyperlinkListener());
-//        RSyntaxPanel.textArea.setAutoIndentEnabled(true);
-//
-//        RSyntaxPanel.textArea.putClientProperty(AccessibleContext.ACCESSIBLE_NAME_PROPERTY, StringUtil.unescapeXmlEntities(StringUtil.stripHtml(content, " ")));
-//
-//        RSyntaxPanel.textArea.setText(content);
-//
-//        RSyntaxPanel.textArea.setEditable(false);
-//
-//        if (RSyntaxPanel.textArea.getCaret() != null) {
-//            RSyntaxPanel.textArea.setCaretPosition(0);
-//        }
-//
-//        RSyntaxPanel.textArea.revalidate();
-//        RSyntaxPanel.textArea.repaint();
-//
-//        return RSyntaxPanel.createComponent();
-//    }
+
+    public void textPaneUpdateText(String content) {
+        textPane.setText(String.format("<div class=\"content\">%s</div>", HtmlUtil.md2html(content)));
+    }
 
     public class messageTextarea extends JTextArea {
         public messageTextarea(String content) {
             setEditable(false);
             setOpaque(false);
             setBorder(null);
-            setForeground(JBColor.namedColor("Label.infoForeground", new JBColor(Color.decode("#f1f1f1"), Color.decode("#000000"))));
-            setFont(new Font("Microsoft YaHei", Font.PLAIN,stateStore.CHAT_PANEL_FONT_SIZE));
             setLineWrap(true);
             setWrapStyleWord(true);
+            setForeground(JBColor.namedColor("Label.infoForeground", new JBColor(Color.decode("#f1f1f1"), Color.decode("#000000"))));
+            setFont(new Font("Microsoft YaHei", Font.PLAIN,stateStore.CHAT_PANEL_FONT_SIZE));
+            putClientProperty(AccessibleContext.ACCESSIBLE_NAME_PROPERTY, StringUtil.unescapeXmlEntities(StringUtil.stripHtml(content, " ")));
             setText(content);
         }
     }
@@ -503,8 +470,11 @@ public class MessageComponent extends JBPanel<MessageComponent> {
 
     public void scrollToBottom() {
         SwingUtilities.invokeLater(() -> {
-            Rectangle bounds = getBounds();
-            scrollRectToVisible(bounds);
+            Rectangle visibleRect = getVisibleRect();
+            if (visibleRect.height > 64) { // 做个可视滚动，输出内容时不完全限制滚动
+                Rectangle bounds = getBounds();
+                scrollRectToVisible(bounds);
+            }
         });
     }
 
@@ -527,7 +497,7 @@ public class MessageComponent extends JBPanel<MessageComponent> {
 //                component.updateMessage(message);
 //                scrollToBottom();
 //                component.updateUI();
-                textPane.setText(HtmlUtil.md2html(message));
+                textPaneUpdateText(message);
                 scrollToBottom();
                 textPane.updateUI();
             } catch (Exception e) {

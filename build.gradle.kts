@@ -3,11 +3,13 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 fun properties(key: String) = project.findProperty(key).toString()
 
+fun <T> Property<T>.set(it: String) = it
+
 plugins {
     // Java support
     id("java")
     // Kotlin support
-    id("org.jetbrains.kotlin.jvm") version "1.9.0"
+    id("org.jetbrains.kotlin.jvm") version "2.0.0"
     // Gradle IntelliJ Plugin
     id("org.jetbrains.intellij") version "1.17.4"
 }
@@ -25,6 +27,8 @@ repositories {
     gradlePluginPortal()
 }
 
+var graalVMVersion: String = "23.1.5";
+
 dependencies {
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("cn.hutool:hutool-http:5.8.12")
@@ -32,6 +36,8 @@ dependencies {
     implementation("com.alibaba.fastjson2:fastjson2:2.0.20")
     implementation("com.squareup.okhttp3:okhttp-sse:4.10.0")
     implementation("com.vladsch.flexmark:flexmark-all:0.62.2")
+//    implementation("org.graalvm.polyglot:polyglot:$graalVMVersion")
+//    implementation("org.graalvm.polyglot:js:$graalVMVersion")
 }
 
 // Configure Gradle IntelliJ Plugin - read more: https://github.com/JetBrains/gradle-intellij-plugin
@@ -54,9 +60,12 @@ tasks {
             targetCompatibility = it
         }
         withType<KotlinCompile> {
-            kotlinOptions.jvmTarget = it
+            compilerOptions {
+                jvmTarget.set(it)
+            }
         }
     }
+
 
     wrapper {
         gradleVersion = properties("gradleVersion")
