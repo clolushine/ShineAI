@@ -1,4 +1,4 @@
-# ShinaAI
+# ShineAI
 
 下载插件: 首先，你需要下载插件的 zip 文件或 jar 文件。
 
@@ -13,3 +13,7 @@
 选择插件文件： 在文件选择对话框中，选择你下载的插件 zip 文件或 jar 文件，然后点击 "OK"。
 
 重启 IntelliJ IDEA: IntelliJ IDEA 会提示你重启 IDE 以使插件生效。 点击 "Restart IDE" 重启 IDE。
+
+
+## Unishine for h5/web
+- h5版： [https://github.com/cloudshinezhong/unishine](https://github.com/cloudshinezhong/unishine)
