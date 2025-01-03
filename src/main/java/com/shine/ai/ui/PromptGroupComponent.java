@@ -135,16 +135,14 @@ public class PromptGroupComponent extends JBPanel<PromptGroupComponent> implemen
     }
 
     public void refreshListCounts() {
-        PromptGroupComponent component = (PromptGroupComponent) ThisMainPanel.splitter.getFirstComponent();
         if (enablePrompts) {
             listCountsLabel.setText("total：" + promptList.size() + " prompts");
             listCountsLabel.setForeground(JBColor.namedColor("Label.infoForeground", new JBColor(Color.decode("#ee9e26"), Color.decode("#ee9e26"))));
-            if (component != null) component.setVisible(true);
+            setVisible(true);
             myList.setVisible(true);
         }else {
-            if (component != null) component.setVisible(false);
+            setVisible(false);
             myList.setVisible(false);
-            ThisMainPanel.splitter.setProportion(0.01f);
         }
     }
 

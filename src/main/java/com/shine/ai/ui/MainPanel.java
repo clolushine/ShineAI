@@ -19,7 +19,7 @@ public class MainPanel {
         this.myProject = project;
         this.AIPanel = settingPanel;
 
-        splitter = new OnePixelSplitter(false,0.28f);
+        splitter = new OnePixelSplitter(false,0.22f);
         splitter.setDividerWidth(2);
 
         promptContentPanel = new PromptGroupComponent(project,settingPanel,this);
