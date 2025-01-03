@@ -18,6 +18,7 @@ import com.shine.ai.util.StringUtil;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
+import javax.swing.border.Border;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.*;
@@ -34,7 +35,6 @@ public class PromptGroupComponent extends JBPanel<PromptGroupComponent> implemen
 
     private final AIAssistantSettingsState stateStore = AIAssistantSettingsState.getInstance();
 
-    private final MyAdjustmentListener scrollListener = new MyAdjustmentListener();
     public List<JsonObject> promptList = new ArrayList<>();
     public Boolean enablePrompts;
 
@@ -49,7 +49,7 @@ public class PromptGroupComponent extends JBPanel<PromptGroupComponent> implemen
         setLayout(new BorderLayout());
         setOpaque(true);
         setBorder(JBUI.Borders.empty());
-        setBackground(new JBColor(0xEAEEF7, 0x45494A));
+        setBackground(UIUtil.getListBackground());
 
         JPanel mainPanel = new JPanel(new BorderLayout());
 
@@ -60,7 +60,10 @@ public class PromptGroupComponent extends JBPanel<PromptGroupComponent> implemen
         myList.setBorder(JBUI.Borders.empty(0,10));
 
         listCountsLabel = new JLabel();
-        listCountsLabel.setBorder(JBUI.Borders.empty(6,0));
+        Border infoTopOuterBorder = BorderFactory.createMatteBorder(0, 0, 1, 0, new JBColor(Color.lightGray,  Color.decode("#6c6c6c"))); // 使用背景颜色
+        Border infoTopInnerBorder = JBUI.Borders.empty(8,24);
+        Border compoundBorder = BorderFactory.createCompoundBorder(infoTopOuterBorder,infoTopInnerBorder);
+        listCountsLabel.setBorder(compoundBorder);
         listCountsLabel.setHorizontalAlignment(SwingConstants.CENTER);
         listCountsLabel.setForeground(JBColor.namedColor("Label.infoForeground", new JBColor(Gray.x80, Gray.x8C)));
         listCountsLabel.setFont(JBUI.Fonts.create(null,13));
@@ -132,25 +135,23 @@ public class PromptGroupComponent extends JBPanel<PromptGroupComponent> implemen
     }
 
     public void refreshListCounts() {
+        PromptGroupComponent component = (PromptGroupComponent) ThisMainPanel.splitter.getFirstComponent();
         if (enablePrompts) {
             listCountsLabel.setText("total：" + promptList.size() + " prompts");
-            ThisMainPanel.splitter.getProportion();
             listCountsLabel.setForeground(JBColor.namedColor("Label.infoForeground", new JBColor(Color.decode("#ee9e26"), Color.decode("#ee9e26"))));
+            if (component != null) component.setVisible(true);
             myList.setVisible(true);
         }else {
+            if (component != null) component.setVisible(false);
             myList.setVisible(false);
-            ThisMainPanel.splitter.setProportion(0.02f);
-            listCountsLabel.setText("Prompts：Off");
-            listCountsLabel.setForeground(JBColor.namedColor("Label.infoForeground", new JBColor(Gray.x80, Gray.x8C)));
+            ThisMainPanel.splitter.setProportion(0.01f);
         }
     }
-
 
     public void delete(String chatId,JComponent component) {
         promptList.removeIf(it -> StringUtil.equals(it.get("promptId").getAsString(),chatId));
         for (Component comp : myList.getComponents()) {
-            if (comp instanceof MessageComponent) {
-                MessageComponent messageItem = (MessageComponent) comp;
+            if (comp instanceof MessageComponent messageItem) {
                 if (StringUtil.equals(messageItem.chatId, chatId)) {
                     myList.remove(messageItem); //使用remove(Component)方法
                 }
@@ -176,9 +177,9 @@ public class PromptGroupComponent extends JBPanel<PromptGroupComponent> implemen
             chatItem.addProperty("time", 0);
             chatItem.addProperty("isPin", false);
             chatItem.addProperty("withContent", content.isBlank() ? "无效提示词" : "预设提示词"); // 把进行时状态改成1
-            MessageComponent messageComponentItem = new MessageComponent(ThisProject,chatItem,null);
+            MessageComponent promptComponentItem = new MessageComponent(ThisProject,chatItem,null);
 
-            myList.add(messageComponentItem);
+            myList.add(promptComponentItem);
         }
         updateLayout();
         updateUI();
@@ -240,15 +241,5 @@ public class PromptGroupComponent extends JBPanel<PromptGroupComponent> implemen
                 source.setValue(source.getMaximum());
             }
         }
-    }
-
-    public void addScrollListener() {
-        myScrollPane.getVerticalScrollBar().
-                addAdjustmentListener(scrollListener);
-    }
-
-    public void removeScrollListener() {
-        myScrollPane.getVerticalScrollBar().
-                removeAdjustmentListener(scrollListener);
     }
 }

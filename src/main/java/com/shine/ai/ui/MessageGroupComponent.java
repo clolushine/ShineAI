@@ -1,6 +1,5 @@
 package com.shine.ai.ui;
 
-import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.intellij.icons.AllIcons;
@@ -148,7 +147,7 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
         init();
 
         infoTopPanel.setOpaque(true);
-        Border infoTopOuterBorder = BorderFactory.createMatteBorder(0, 0, 1, 0, new JBColor(Color.lightGray, Color.black)); // 使用背景颜色
+        Border infoTopOuterBorder = BorderFactory.createMatteBorder(0, 0, 1, 0, new JBColor(Color.lightGray,  Color.decode("#6c6c6c"))); // 使用背景颜色
         Border infoTopInnerBorder = JBUI.Borders.empty(12,20);
         Border compoundBorder = BorderFactory.createCompoundBorder(infoTopOuterBorder,infoTopInnerBorder);
         infoTopPanel.setBorder(compoundBorder);
@@ -285,10 +284,6 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
                     JsonObject updateItemInfo = stateStore.mergeJsonObject(imf,chatItemInfo);
                     // 修改 MessageComponent 的内容
                     messageComponent.updateContent(updateItemInfo);
-//                    chatCollection.add("chatList",stateStore.getJsonArray(chatList));
-//                    stateStore.updateChatCollectionInfo(chatCollection);
-                    // 重新验证和重绘
-                    updateLayout();
                     break; // 找到后退出循环
                 }
             }
@@ -322,7 +317,6 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
                 element.addProperty("isPin",true);
                 MessageComponent messageComponent = (MessageComponent) component;
                 messageComponent.updateActions(element);
-                updateLayout();
                 break; // 找到后立即退出循环
             }
         }
@@ -342,7 +336,6 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
                 element.addProperty("isPin",false);
                 MessageComponent messageComponent = (MessageComponent) component;
                 messageComponent.updateActions(element);
-                updateLayout();
                 break; // 找到后立即退出循环
             }
         }
@@ -592,10 +585,6 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
     public void removeScrollListener() {
         myScrollPane.getVerticalScrollBar().
                 removeAdjustmentListener(scrollListener);
-    }
-
-    public JsonArray getMessages() {
-        return chatCollection.get("chatList").getAsJsonArray();
     }
 
     public JsonObject getAISetInfo() {

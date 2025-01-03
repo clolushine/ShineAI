@@ -84,7 +84,7 @@ public class MessageActionsComponent extends JPanel {
                 getMainPanel().getContentPanel().deletePin(chatItem.get("chatId").getAsString(),component);
                 getMainPanel().getPromptsPanel().delete(chatItem.get("chatId").getAsString(),component);
             }else {
-                if (getMainPanel().getContentPanel().AIPrompts.size() >=9 ) {
+                if (getMainPanel().getContentPanel().AIPrompts.size() >=9) {
                     BalloonUtil.showBalloon("Cannot add more prompt！！！", MessageType.ERROR,component);
                     return;
                 }
