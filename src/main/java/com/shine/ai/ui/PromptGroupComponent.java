@@ -128,7 +128,7 @@ public class PromptGroupComponent extends JBPanel<PromptGroupComponent> implemen
         cPrompt.addProperty("withContent", content.isBlank() ? "无效提示词" : "预设提示词"); // 把进行时状态改成1
 
         promptList.add(cPrompt);
-        MessageComponent messageComponentItem = new MessageComponent(ThisProject,cPrompt,null);
+        PromptComponent messageComponentItem = new PromptComponent(ThisProject,cPrompt,null);
         myList.add(messageComponentItem);
         updateLayout();
         updateUI();
@@ -149,7 +149,7 @@ public class PromptGroupComponent extends JBPanel<PromptGroupComponent> implemen
     public void delete(String chatId,JComponent component) {
         promptList.removeIf(it -> StringUtil.equals(it.get("promptId").getAsString(),chatId));
         for (Component comp : myList.getComponents()) {
-            if (comp instanceof MessageComponent messageItem) {
+            if (comp instanceof PromptComponent messageItem) {
                 if (StringUtil.equals(messageItem.chatId, chatId)) {
                     myList.remove(messageItem); //使用remove(Component)方法
                 }
@@ -175,7 +175,7 @@ public class PromptGroupComponent extends JBPanel<PromptGroupComponent> implemen
             chatItem.addProperty("time", 0);
             chatItem.addProperty("isPin", false);
             chatItem.addProperty("withContent", content.isBlank() ? "无效提示词" : "预设提示词"); // 把进行时状态改成1
-            MessageComponent promptComponentItem = new MessageComponent(ThisProject,chatItem,null);
+            PromptComponent promptComponentItem = new PromptComponent(ThisProject,chatItem,null);
 
             myList.add(promptComponentItem);
         }

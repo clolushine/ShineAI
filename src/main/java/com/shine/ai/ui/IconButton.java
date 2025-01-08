@@ -64,6 +64,10 @@ public class IconButton extends JPanel {
         button.setIcon(buttonIcon);
     }
 
+    public void setText(String text) {
+        button.setText(text);
+    }
+
     private Icon createGrayIcon(Icon icon) {
         // 创建灰度过滤器
         ImageFilter filter = new GrayFilter(true, 20); //  50 是灰度级别，可以根据需要调整

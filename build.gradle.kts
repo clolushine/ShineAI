@@ -36,14 +36,13 @@ dependencies {
     implementation("com.alibaba.fastjson2:fastjson2:2.0.20")
     implementation("com.squareup.okhttp3:okhttp-sse:4.10.0")
     implementation("com.vladsch.flexmark:flexmark-all:0.62.2")
-//    implementation("org.graalvm.polyglot:polyglot:$graalVMVersion")
-//    implementation("org.graalvm.polyglot:js:$graalVMVersion")
+//    implementation("com.fifesoft:rsyntaxtextarea:3.5.1")
+//    implementation("org.graalvm.polyglot:polyglot:${graalVMVersion}")
+//    implementation("org.graalvm.polyglot:js:${graalVMVersion}")
 }
 
 // Configure Gradle IntelliJ Plugin - read more: https://github.com/JetBrains/gradle-intellij-plugin
 intellij {
-//    localPath.set("D:\\Software\\IntelliJ IDEA Community Edition 2024.3")
-
     pluginName.set(properties("pluginName"))
     version.set(properties("platformVersion"))
     type.set(properties("platformType"))

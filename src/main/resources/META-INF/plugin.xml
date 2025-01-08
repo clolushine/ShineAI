@@ -11,7 +11,7 @@
                 factoryClass="com.shine.ai.MyToolWindowFactory"/>
     <applicationConfigurable parentId="tools" instance="com.shine.ai.settings.AIAssistantSettingsPanel"
                              id="com.shine.ai.settings.AIAssistantSettings"
-                             displayName="AIAssistant"/>
+                             displayName="ShineAI"/>
     <applicationConfigurable parentId="com.shine.ai.settings.AIAssistantSettings" instance="com.shine.ai.settings.CFAISettingPanel"
                              id="com.shine.ai.settings.CloudflareAI"
                              displayName="CloudflareAI"/>

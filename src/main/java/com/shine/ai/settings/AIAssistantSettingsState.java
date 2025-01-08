@@ -41,6 +41,7 @@ public class AIAssistantSettingsState implements PersistentStateComponent<AIAssi
   public int CHAT_PANEL_FONT_SIZE = 14;
 
   public String requestTimeout = "60000";
+  public Boolean enableHighlightCode = false;
   public Boolean enableLineWarp = true;
   public Boolean enableAvatar = true;
   public Map<Integer,String> contentOrder = new HashMap<>(){{

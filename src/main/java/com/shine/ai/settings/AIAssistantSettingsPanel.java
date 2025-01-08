@@ -30,7 +30,6 @@ import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 import static com.shine.ai.MyToolWindowFactory.*;
 
@@ -126,7 +125,7 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
 
         assert loginButton != null;
         loginButton.addActionListener(e -> {
-            new LoginDialog().openDialog();
+            new LoginDialog().openDialog("");
         });
 
         assert logoutButton != null;

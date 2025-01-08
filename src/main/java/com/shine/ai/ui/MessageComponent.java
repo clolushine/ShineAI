@@ -3,7 +3,6 @@ package com.shine.ai.ui;
 import com.google.gson.JsonObject;
 import com.intellij.notification.impl.ui.NotificationsUtil;
 import com.intellij.openapi.project.Project;
-import com.intellij.ui.BrowserHyperlinkListener;
 import com.intellij.ui.Gray;
 import com.intellij.ui.JBColor;
 import com.intellij.ui.components.JBPanel;
@@ -19,15 +18,15 @@ import org.slf4j.LoggerFactory;
 
 import javax.accessibility.AccessibleContext;
 import javax.swing.*;
-import javax.swing.text.*;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.StyledDocument;
 import javax.swing.text.html.HTMLDocument;
 import javax.swing.text.html.HTMLEditorKit;
 import javax.swing.text.html.StyleSheet;
 import java.awt.*;
 import java.io.IOException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.*;
 import java.util.List;
 
 
@@ -37,9 +36,13 @@ public class MessageComponent extends JBPanel<MessageComponent> {
 
     private final AIAssistantSettingsState stateStore = AIAssistantSettingsState.getInstance();
 
-//    private final MessagePanel component = new MessagePanel();
+    private RoundPanel messageAreaPanel;
 
-    private JTextPane textPane;
+    private final TextPaneComponent textPane = new TextPaneComponent();
+
+    private final MyScrollPane textScrollPane = new MyScrollPane(textPane, ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+
+//    private RSyntaxTextAreaComponent currentRSyntaxTextArea;
 
     public MessageActionsComponent messageActions;
 
@@ -71,7 +74,7 @@ public class MessageComponent extends JBPanel<MessageComponent> {
         setDoubleBuffered(true);
         setOpaque(true);
         setBorder(JBUI.Borders.empty(6));
-        setLayout(new BorderLayout(JBUI.scale(7), 0));
+        setLayout(new BorderLayout(JBUI.scale(8), 0));
 
         initComponent();
     }
@@ -192,14 +195,9 @@ public class MessageComponent extends JBPanel<MessageComponent> {
         messagePanel.setLayout(new BoxLayout(messagePanel, BoxLayout.Y_AXIS));
         messagePanel.setOpaque(false);
         messagePanel.setMinimumSize(new Dimension(getMinimumSize().width,32));
-        messagePanel.setBorder(JBUI.Borders.empty(6));
+        messagePanel.setBorder(isMe ? JBUI.Borders.emptyLeft(96) : JBUI.Borders.emptyRight(0));
 
-        SwingUtilities.invokeLater(() -> {
-            if (isMe) messagePanel.setBackground(new JBColor(Color.decode("#a5d6ff"),Color.decode("#b4d6ff")));
-//            else messagePanel.setBackground(new JBColor(Color.decode("#f1f1e1"), Color.decode("#f1f1f1")));
-        });
-
-        Component messageTextarea = isMe ? new messageTextarea(content) : createTextPaneComponent(content);
+        Component messageTextarea = isMe ? new messageTextarea(content) : createMessageAreaComponent(content);
         messagePanel.add(messageTextarea,BorderLayout.CENTER);
 
         centerPanel.add(messagePanel, BorderLayout.CENTER);
@@ -233,86 +231,117 @@ public class MessageComponent extends JBPanel<MessageComponent> {
 
         add(southPanel,BorderLayout.SOUTH); // 将 MainPanel 添加到中心
     }
-
-//    public Component createContentComponent(String content) {
-//        component.setEditable(false);
-//        component.setContentType("text/html; charset=UTF-8");
-//        component.putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, java.lang.Boolean.TRUE);
-//        component.setOpaque(false);
-//        component.setBorder(null);
-//        component.addHyperlinkListener(new BrowserHyperlinkListener());
 //
-//        // 配置字体和样式
-//        HTMLEditorKit kit = (HTMLEditorKit) component.getEditorKit();
-//        StyleSheet styleSheet = kit.getStyleSheet();
-//        styleSheet.importStyleSheet(cssResource);
-//        component.setEditorKit(kit);
+//    public JPanel RSyntaxTextAreaComponentPanel(Element codeElement) {
+//        JPanel area = new JPanel(new BorderLayout());
 //
-//        NotificationsUtil.configureHtmlEditorKit(component, true);
-//        component.putClientProperty(AccessibleContext.ACCESSIBLE_NAME_PROPERTY, StringUtil.unescapeXmlEntities(StringUtil.stripHtml(content, " ")));
+//        currentRSyntaxTextArea = new RSyntaxTextAreaComponent();
+//        String codeText = Objects.requireNonNull(codeElement).text(); //提取代码文本
+//        String lang = currentRSyntaxTextArea.extractLanguage(codeElement);
+//        currentRSyntaxTextArea.setLanguage(currentRSyntaxTextArea.getSyntaxStyle(lang));
+//        currentRSyntaxTextArea.setContent(codeText);
+//        area.add(currentRSyntaxTextArea,BorderLayout.SOUTH);
 //
-//        component.updateMessage(content);
+//        RoundPanel topPanel = new RoundPanel(new BorderLayout());
+//        topPanel.setBorder(JBUI.Borders.empty(0,12));
+//        SwingUtilities.invokeLater(()-> {
+//            topPanel.setBackground(new JBColor(Color.decode("#f1f1e1"),Color.decode("#6f757c")));
+//        });
 //
-//        component.setEditable(false);
+//        IconButton copyAction = new IconButton("copy", AllIcons.Actions.Copy);
+//        copyAction.addActionListener(e -> {
+//            ClipboardUtil.setStr(codeText);
+//            BalloonUtil.showBalloon("Copy successfully", MessageType.INFO,area);
+//        });
+//        topPanel.add(copyAction,BorderLayout.EAST);
 //
-//        if (component.getCaret() != null) {
-//            component.setCaretPosition(0);
-//        }
+//        JLabel langLabel = new JLabel(lang);
+//        langLabel.setFont(JBUI.Fonts.create(null,14));
+//        langLabel.setForeground(JBColor.namedColor("Label.infoForeground", new JBColor(Color.GREEN,Color.CYAN)));
+//        topPanel.add(langLabel,BorderLayout.WEST);
 //
-//        component.revalidate();
-//        component.repaint();
+//        area.add(topPanel,BorderLayout.NORTH);
 //
-//        return component;
+//        return area;
 //    }
 
-    public JTextPane createTextPaneComponent(String content) {
-        textPane = new JTextPane(); // 使用 JTextPane
-        textPane.setContentType("text/html; charset=UTF-8");
-//        textPane.setForeground(JBColor.namedColor("Label.infoForeground", new JBColor(Color.decode("#f1f1f1"), Color.decode("#000000"))));
-        textPane.setFont(new Font("Microsoft YaHei", Font.PLAIN,stateStore.CHAT_PANEL_FONT_SIZE));
-        textPane.setEditable(false);
-        textPane.setOpaque(false);
-        textPane.setBorder(null);
-        textPane.addHyperlinkListener(new BrowserHyperlinkListener());
-        NotificationsUtil.configureHtmlEditorKit(textPane, true);
+    public MyScrollPane TextPaneAreaComponent (String content) {
+        textPane.updateContent(content);
 
-        HTMLEditorKit kit = (HTMLEditorKit) textPane.getEditorKit();
-        StyleSheet styleSheet = kit.getStyleSheet();
-        styleSheet.addRule("body{ padding: 0;margin:0; }");
-//        styleSheet.importStyleSheet(getClass().getResource("/css/darcula.min.css"););
+        SwingUtilities.invokeLater(()-> {
+            textScrollPane.getHorizontalScrollBar().setValue(0);
+        });
 
-        String htmlContent = String.format("<div class=\"content\">%s</div>", HtmlUtil.md2html(content));
-        styleSheet.addRule(".content{padding: 6px 10px; color: #000000; background-color: #f1f1f1; border-radius: 12px; }");
-
-        StyledDocument doc = textPane.getStyledDocument();
-
-        try {
-            kit.insertHTML((HTMLDocument) doc, doc.getLength(), htmlContent, 0, 0, null);
-        } catch (BadLocationException | IOException e) {
-            // 处理异常，例如打印错误信息或显示默认内容
-            textPane.setText("Error rendering content: " + e.getMessage());
-        }
-
-        textPane.setCaretPosition(0);  // 设置光标位置
-
-        return textPane; // 返回 JTextPane
+        return textScrollPane;
     }
 
-    public void textPaneUpdateText(String content) {
-        textPane.setText(String.format("<div class=\"content\">%s</div>", HtmlUtil.md2html(content)));
+
+    public RoundPanel createMessageAreaComponent(String content) {
+        messageAreaPanel = new RoundPanel();
+        messageAreaPanel.setLayout(new BoxLayout(messageAreaPanel, BoxLayout.Y_AXIS)); // 设置纵向排列
+
+//        String htmlContent = HtmlUtil.md2html(content);
+//        Document doc = Jsoup.parse(htmlContent);
+//        Elements codeElements = doc.select("pre > code");
+//        StringBuilder currentHtml = new StringBuilder();
+//
+//        // 提取代码块和其它元素
+//        for (Element element : doc.body().children()) {
+//            if (element.tagName().equals("pre") && element.child(0).tagName().equals("code")) {
+//                // 遇到代码块
+//                if (!currentHtml.isEmpty()) {
+//                    // 将累积的 HTML 内容添加到列表
+//                    messageAreaPanel.add(TextPaneAreaComponent(currentHtml.toString()));
+//                    currentHtml.setLength(0); // 清空 StringBuilder
+//                }
+//                messageAreaPanel.add(Box.createRigidArea(new Dimension(0, 8))); // 上间距
+//                messageAreaPanel.add(RSyntaxTextAreaComponentPanel(element.child(0)));
+//                messageAreaPanel.add(Box.createRigidArea(new Dimension(0, 8))); // 下间距
+//            } else {
+//                // 遇到其他元素
+//                currentHtml.append(element.outerHtml()); // 将 HTML 内容累积到 StringBuilder
+//            }
+//        }
+//
+//        // 处理循环结束后剩余的 HTML 内容
+//        if (!currentHtml.isEmpty()) {
+//            messageAreaPanel.add(TextPaneAreaComponent(currentHtml.toString()));
+//        }
+
+        messageAreaPanel.add(TextPaneAreaComponent(content));
+
+        return messageAreaPanel; // 返回 JTextPane
     }
 
-    public class messageTextarea extends JTextArea {
+    public class messageTextarea extends JTextPane {
         public messageTextarea(String content) {
             setEditable(false);
             setOpaque(false);
-            setBorder(null);
-            setLineWrap(true);
-            setWrapStyleWord(true);
-            setForeground(JBColor.namedColor("Label.infoForeground", new JBColor(Color.decode("#f1f1f1"), Color.decode("#000000"))));
+            setContentType("text/html; charset=UTF-8");
             setFont(new Font("Microsoft YaHei", Font.PLAIN,stateStore.CHAT_PANEL_FONT_SIZE));
+            setForeground(JBColor.namedColor("Label.infoForeground", new JBColor(Color.decode("#f1f1f1"), Color.decode("#000000"))));
+            setEditable(false);
+            setOpaque(false);
+            setBorder(null);
+            NotificationsUtil.configureHtmlEditorKit(this, true);
+
+            HTMLEditorKit kit = (HTMLEditorKit) getEditorKit();
+            StyleSheet styleSheet = kit.getStyleSheet();
+
+            styleSheet.addRule("body{ padding: 0;margin:0;}");
+            String htmlContent = String.format("<div class=\"content\">%s</div>", HtmlUtil.md2html(content));
+            styleSheet.addRule(String.format(".content{ padding: 6px 10px; color: #000000; background: %s; border-radius: 12px;}","#b4d6ff"));
+
             putClientProperty(AccessibleContext.ACCESSIBLE_NAME_PROPERTY, StringUtil.unescapeXmlEntities(StringUtil.stripHtml(content, " ")));
-            setText(content);
+
+            StyledDocument document = getStyledDocument();
+
+            try {
+                kit.insertHTML((HTMLDocument) document, document.getLength(), htmlContent, 0, 0, null);
+            } catch (BadLocationException | IOException e) {
+                // 处理异常，例如打印错误信息或显示默认内容
+                setText("Error rendering content: " + e.getMessage());
+            }
         }
     }
 
@@ -497,7 +526,7 @@ public class MessageComponent extends JBPanel<MessageComponent> {
 //                component.updateMessage(message);
 //                scrollToBottom();
 //                component.updateUI();
-                textPaneUpdateText(message);
+                textPane.updateContent(message);
                 scrollToBottom();
                 textPane.updateUI();
             } catch (Exception e) {

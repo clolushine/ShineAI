@@ -58,6 +58,7 @@ public class LoginDialog extends JDialog {
                                 public void actionPerformed(ActionEvent e) {
                                     // 在 EDT 中执行你的代码
                                     SwingUtilities.invokeLater(() -> {
+                                        ShineAIUtil.isLoginDialogShown = false; // 将状态改回
                                         messageBus.syncPublisher(LoginSuccessListener.TOPIC).loginSuccessful();
                                         dispose();
                                     });
@@ -108,10 +109,10 @@ public class LoginDialog extends JDialog {
         return StringUtil.isNotEmpty(stateStore.UserToken) & !stateStore.getUserInfo().isJsonNull();
     }
 
-    public void openDialog() {
+    public void openDialog(String withContent) {
         SwingUtilities.invokeLater(() -> { // 在事件调度线程中执行
             LoginDialog dialog = new LoginDialog();
-            dialog.setTitle("Login：ShineAI");
+            dialog.setTitle("Login：" + (withContent.isBlank() ? "ShineAI" : withContent));
 
             dialog.pack(); //  先调用 pack()
             dialog.setLocationRelativeTo(null);

@@ -89,7 +89,7 @@ public class GroqAIHandler extends AbstractHandler {
                         @Override
                         protected Void doInBackground() {
                             System.out.println("refreshUserToken");
-                            ShineAIUtil.refreshUserToken(); // 在后台线程刷新 Token
+                            ShineAIUtil.refreshUserToken(0); // 在后台线程刷新 Token
                             return null;
                         }
                         @Override
@@ -222,7 +222,7 @@ public class GroqAIHandler extends AbstractHandler {
                         @Override
                         protected Void doInBackground() {
                             System.out.println("refreshUserToken");
-                            ShineAIUtil.refreshUserToken(); // 在后台线程刷新 Token
+                            ShineAIUtil.refreshUserToken(0); // 在后台线程刷新 Token
                             return null;
                         }
                         @Override

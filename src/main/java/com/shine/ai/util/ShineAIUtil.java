@@ -5,9 +5,12 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.intellij.openapi.project.Project;
+import com.intellij.notification.Notification;
+import com.intellij.notification.NotificationType;
+import com.intellij.notification.Notifications;
 import com.intellij.openapi.ui.MessageDialogBuilder;
 import com.intellij.openapi.ui.MessageType;
+import com.shine.ai.message.MsgEntryBundle;
 import com.shine.ai.settings.AIAssistantSettingsState;
 import com.shine.ai.settings.LoginDialog;
 import org.slf4j.Logger;
@@ -27,8 +30,11 @@ public class ShineAIUtil {
     public static Integer timeout = 60000;
     public static AIAssistantSettingsState state = AIAssistantSettingsState.getInstance();
 
+    public static boolean isLoginDialogShown = false; // 静态变量，跟踪弹窗状态
+
     public static String request(String url,String method, JsonObject options, Integer retry) {
         String URL = baseUrl +  url;
+        int reCount = retry > 0 ? retry : 0;
         try {
             String response;
             switch (method.toUpperCase()) { // 将 method 转换为大写进行比较
@@ -56,9 +62,25 @@ public class ShineAIUtil {
                 default:
                     throw new IllegalArgumentException("Unsupported HTTP method: " + method);
             }
-            if (response.contains("JwtTokenExpired") && retry<3) {
-                refreshUserToken();
-                return request(url,method,options,++retry);
+            if (reCount<3) {
+                if (response.contains("JwtTokenInvalid") || response.contains("JwtTokenSignatureMismatched") || response.contains("JwtTokenExpired")) {
+                    ++reCount;
+                    refreshUserToken(reCount);
+                    return request(url,method,options,reCount);
+                }
+            }else {
+                state.setUserInfo(new JsonObject());
+                state.UserToken = "";
+                if (!isLoginDialogShown) { // 检查弹窗是否已经显示
+                    isLoginDialogShown = true; // 设置弹窗状态为已显示
+                    Notifications.Bus.notify(
+                            new Notification(MsgEntryBundle.message("group.id"),
+                                    "Token expired",
+                                    "Login info expired,Please login and try again.",
+                                    NotificationType.ERROR));
+                    new LoginDialog().openDialog("Token expired");
+                }
+                return "{\"status\":\"err\"}";
             }
             JsonObject object = JsonParser.parseString(response).getAsJsonObject();
             if (!object.keySet().isEmpty()) {
@@ -134,28 +156,14 @@ public class ShineAIUtil {
         state.UserToken = "";
     }
 
-    public static void refreshUserToken() {
+    public static void refreshUserToken(Integer retry) {
         JsonObject params = new JsonObject();
         String URL = "/reToken";
         if (state.getUserInfo().has("refreshToken")) {
             params.addProperty("refreshToken",state.getUserInfo().get("refreshToken").getAsString());
         }
         try {
-            String grants = request(URL,"POST",params,0);
-            if (grants.contains("JwtTokenInvalid") ||
-                    grants.contains("JwtTokenSignatureMismatched") ||
-                    grants.contains("JwtTokenExpired")
-            ) {
-                state.setUserInfo(new JsonObject());
-                state.UserToken = "";
-                boolean yes = MessageDialogBuilder.yesNo("Token expired", "Login info expired,Please login and try again.")
-                        .yesText("Yes")
-                        .noText("No").ask((Project) null);
-                if (yes) {
-                   new LoginDialog().openDialog();
-                }
-                return;
-            }
+            String grants = request(URL,"POST",params,retry);
             JsonObject object = JsonParser.parseString(grants).getAsJsonObject();
             if (object.get("code").getAsInt() == 0 && object.has("data")) {
                 JsonObject resData = object.get("data").getAsJsonObject(); // 解构data

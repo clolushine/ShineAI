@@ -5,8 +5,8 @@ import java.awt.*;
 import java.awt.geom.RoundRectangle2D;
 
 public class RoundPanel extends JComponent {
-    private int arcWidth = 8;
-    private int arcHeight = 8;
+    private int arcWidth = 10;
+    private int arcHeight = 10;
 
     public RoundPanel(BorderLayout borderLayout) {
         super();
