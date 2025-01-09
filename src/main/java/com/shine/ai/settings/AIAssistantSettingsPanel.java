@@ -27,7 +27,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -64,6 +64,8 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
     private JPanel logoutPanel;
     private JSpinner dialogFontSizeSpinner;
     private JPanel signPanel;
+    private JComboBox<String> PromptsPosComboBox;
+    private JCheckBox enableParserCodeCheckBox;
 
     private LoadingButton logoutButton;
     private LoadingButton loginButton;
@@ -73,6 +75,12 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
             CLOUDFLARE_AI_CONTENT_NAME,
             Google_AI_CONTENT_NAME,
             GROQ_AI_CONTENT_NAME};
+
+    private final Map<Integer,String> promptsComboBoxItemsPos = new HashMap<>(){{
+        put(0,"left");
+        put(1,"right");
+    }};
+
     private boolean needRestart = false;
 
     public static final String SHINE_AI_BASE_URL = "https://34343433.xyz";
@@ -93,14 +101,22 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
         SpinnerNumberModel fontSizeModel = new SpinnerNumberModel(12, 8, 20, 1);
         dialogFontSizeSpinner.setModel(fontSizeModel);
 
+        PromptsPosComboBox.setModel(new DefaultComboBoxModel<>(promptsComboBoxItemsPos.values().toArray(new String[0])));
+
         updateStorageUsedInfo(); // 更新storage缓存使用信息
 
         // 注册监听器
         connection = ApplicationManager.getApplication().getMessageBus().connect();
-        connection.subscribe(LoginDialog.LoginSuccessListener.TOPIC, new LoginDialog.LoginSuccessListener() {
+        connection.subscribe(LoginDialog.LoginSuccessListener.TOPIC, (LoginDialog.LoginSuccessListener) this::updateLoginUserInfo);
+
+        assert UseremailField != null;
+        UseremailField.addMouseListener(new MouseAdapter() {
             @Override
-            public void loginSuccessful() {
-                updateLoginUserInfo();
+            public void mouseClicked(MouseEvent e) {
+                if (!UseremailField.getText().isBlank()) {
+                    ClipboardUtil.setStr(UseremailField.getText());
+                    BalloonUtil.showBalloon("Copy successfully", MessageType.INFO,UseremailField);
+                }
             }
         });
 
@@ -143,6 +159,12 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
                         });
             }
         });
+
+        enableParserCodeCheckBox.addChangeListener(e -> {
+           if (enableParserCodeCheckBox.isSelected()) {
+               BalloonUtil.showBalloon("Enabling it may cause performance issues, such as lag or stuttering.",MessageType.WARNING,enableParserCodeCheckBox);
+           }
+        });
     }
 
     private String checkTokenExists() {
@@ -162,10 +184,13 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
         secondCombobox.setSelectedItem(state.contentOrder.get(2));
         thirdCombobox.setSelectedItem(state.contentOrder.get(3));
 
+        PromptsPosComboBox.setSelectedItem(promptsComboBoxItemsPos.get(state.promptsPos));
+
         dialogFontSizeSpinner.setValue(state.CHAT_PANEL_FONT_SIZE);
 
         enableLineWarpCheckBox.setSelected(state.enableLineWarp);
         enableAvatarCheckBox.setSelected(state.enableAvatar);
+        enableParserCodeCheckBox.setSelected(state.enableParserCode);
 
         UseremailField.setText(state.Useremail);
 
@@ -188,14 +213,18 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
                 !StringUtil.equals(state.contentOrder.get(2), (String)secondCombobox.getSelectedItem())||
                 !StringUtil.equals(state.contentOrder.get(3), (String)thirdCombobox.getSelectedItem()) ||
                 state.CHAT_PANEL_FONT_SIZE != (int) dialogFontSizeSpinner.getValue() ||
+                promptsComboBoxItemsPos.get(state.promptsPos) != PromptsPosComboBox.getSelectedItem() ||
                 !state.enableAvatar == enableAvatarCheckBox.isSelected() ||
-                !state.enableLineWarp == enableLineWarpCheckBox.isSelected()
+                !state.enableLineWarp == enableLineWarpCheckBox.isSelected() ||
+                !state.enableParserCode == enableParserCodeCheckBox.isSelected()
         ;
 
         return
                 !StringUtil.equals(state.requestTimeout, requestTimeoutField.getText()) ||
+                        promptsComboBoxItemsPos.get(state.promptsPos) != PromptsPosComboBox.getSelectedItem() ||
                         !state.enableAvatar == enableAvatarCheckBox.isSelected() ||
                         !state.enableLineWarp == enableLineWarpCheckBox.isSelected() ||
+                        !state.enableParserCode == enableParserCodeCheckBox.isSelected() ||
                         state.CHAT_PANEL_FONT_SIZE != (int) dialogFontSizeSpinner.getValue() ||
                         !StringUtil.equals(state.Useremail, UseremailField.getText()) ||
                         !StringUtil.equals(state.contentOrder.get(1), (String)firstCombobox.getSelectedItem()) ||
@@ -212,10 +241,19 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
 
         state.requestTimeout = !requestTimeoutIsNumber ? "60000" : requestTimeoutField.getText();
 
+        Integer promptsPosItem = promptsComboBoxItemsPos.entrySet()
+                .stream()
+                .filter(entry ->  entry.getValue() == PromptsPosComboBox.getSelectedItem())
+                .map(Map.Entry::getKey)
+                .findFirst().orElse(0);
+
         // 默认使用头像
         state.CHAT_PANEL_FONT_SIZE = (int) dialogFontSizeSpinner.getValue();
+        state.promptsPos =  promptsPosItem;
         state.enableLineWarp = enableLineWarpCheckBox.isSelected();
         state.enableAvatar = enableAvatarCheckBox.isSelected();
+        state.enableParserCode = enableParserCodeCheckBox.isSelected();
+
         state.Useremail = UseremailField.getText();
 
         updateLoginUserInfo();

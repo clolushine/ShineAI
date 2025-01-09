@@ -2,6 +2,7 @@ package com.shine.ai.ui;
 
 import com.intellij.openapi.project.Project;
 import com.intellij.ui.OnePixelSplitter;
+import com.shine.ai.settings.AIAssistantSettingsState;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
@@ -19,15 +20,21 @@ public class MainPanel {
         this.myProject = project;
         this.AIPanel = settingPanel;
 
-        splitter = new OnePixelSplitter(false,0.12f);
+        Integer promptsPos = AIAssistantSettingsState.getInstance().promptsPos;
+
+        splitter = new OnePixelSplitter(false,promptsPos <= 0 ? 0.12f : 0.88f);
         splitter.setDividerWidth(2);
 
         promptContentPanel = new PromptGroupComponent(project,settingPanel,this);
 
         contentPanel = new MessageGroupComponent(project,settingPanel,this);
 
-        splitter.setFirstComponent(promptContentPanel);
-        splitter.setSecondComponent(contentPanel);
+        JComponent FirstComponent = promptsPos <= 0 ? promptContentPanel : contentPanel;
+
+        JComponent SecondComponent = promptsPos <= 0 ? contentPanel : promptContentPanel;
+
+        splitter.setFirstComponent(FirstComponent);
+        splitter.setSecondComponent(SecondComponent);
     }
 
     public Project getProject() {

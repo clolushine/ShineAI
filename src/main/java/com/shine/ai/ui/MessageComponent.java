@@ -11,6 +11,7 @@ import com.intellij.util.ui.JBUI;
 import com.shine.ai.icons.AIAssistantIcons;
 import com.shine.ai.settings.AIAssistantSettingsState;
 import com.shine.ai.util.HtmlUtil;
+import com.shine.ai.util.JsonUtil;
 import com.shine.ai.util.StringUtil;
 import com.shine.ai.util.TimeUtil;
 import org.slf4j.Logger;
@@ -452,7 +453,7 @@ public class MessageComponent extends JBPanel<MessageComponent> {
             case "error":
                 if (!textPane.getText().isBlank() && !message.isJsonNull()) {
                     try {
-                        updateMessageContent(message.asMap().toString());
+                        updateMessageContent(String.format("```json\n%s\n```", JsonUtil.prettyJson(message)));
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
@@ -476,7 +477,7 @@ public class MessageComponent extends JBPanel<MessageComponent> {
             case "message:err":
                 if (message.isJsonObject() && !message.has("content")) {
                     try {
-                        updateMessageContent(message.asMap().toString());
+                        updateMessageContent(String.format("```json\n%s\n```",JsonUtil.prettyJson(message)));
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }

@@ -149,7 +149,7 @@ public class PromptComponent extends JBPanel<PromptComponent> {
             String htmlContent = String.format("<div class=\"content\">%s</div>", HtmlUtil.md2html(content));
             styleSheet.addRule(String.format(".content{ padding: 6px 10px; color: #000000; background: %s; border-radius: 12px;}",isMe ? "#b4d6ff" : "#ffffff"));
 
-            putClientProperty(AccessibleContext.ACCESSIBLE_NAME_PROPERTY, StringUtil.unescapeXmlEntities(StringUtil.stripHtml(content, " ")));
+//            putClientProperty(AccessibleContext.ACCESSIBLE_NAME_PROPERTY, StringUtil.unescapeXmlEntities(StringUtil.stripHtml(content, " ")));
 
             StyledDocument document = getStyledDocument();
 

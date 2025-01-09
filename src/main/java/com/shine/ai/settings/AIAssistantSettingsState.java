@@ -42,8 +42,10 @@ public class AIAssistantSettingsState implements PersistentStateComponent<AIAssi
 
   public String requestTimeout = "60000";
   public Boolean enableHighlightCode = false;
+  public Integer promptsPos = 1;
   public Boolean enableLineWarp = true;
   public Boolean enableAvatar = true;
+  public Boolean enableParserCode = false;
   public Map<Integer,String> contentOrder = new HashMap<>(){{
     put(1, CLOUDFLARE_AI_CONTENT_NAME);
     put(2, Google_AI_CONTENT_NAME);
