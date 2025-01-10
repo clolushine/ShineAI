@@ -9,6 +9,7 @@ import com.intellij.util.ImageLoader;
 import com.intellij.util.ui.JBUI;
 import com.shine.ai.icons.AIAssistantIcons;
 import com.shine.ai.settings.AIAssistantSettingsState;
+import com.shine.ai.util.ImgUtils;
 import com.shine.ai.util.JsonUtil;
 import com.shine.ai.util.TimeUtil;
 import org.slf4j.Logger;
@@ -122,11 +123,12 @@ public class MessageComponent extends JBPanel<MessageComponent> {
                 protected Image doInBackground() throws Exception {
                     ImageIcon imageIcon;
                     try {
-                        imageIcon = new ImageIcon(new URL(avatar));
+                        Image image = ImgUtils.loadImage(avatar);
+                        imageIcon = new ImageIcon(image);
                     } catch (Exception e) {
                         imageIcon = isMe ? new ImageIcon(new URL((AIAssistantIcons.ME_URL))) : new ImageIcon(new URL(AIAssistantIcons.AI_URL));
                     }
-                    return ImageLoader.scaleImage(imageIcon.getImage(), 32, 32);  // 在后台线程缩放图片
+                    return ImageLoader.scaleImage(imageIcon.getImage(), 32, 32);
                 }
                 @Override
                 protected void done() {
@@ -135,9 +137,8 @@ public class MessageComponent extends JBPanel<MessageComponent> {
                         if (scaledImage != null) { // 检查图片尺寸
                             RoundImage roundImg = new RoundImage(scaledImage);
                             iconPanel.add(roundImg, BorderLayout.NORTH);
-                            // 在 EDT 中更新 UI
-                            SwingUtilities.invokeLater(topPanel::updateUI);
                         }
+                        SwingUtilities.invokeLater(topPanel::updateUI);
                     } catch (Exception e) {
                         // ... 处理错误
                         System.out.println(e.getMessage());

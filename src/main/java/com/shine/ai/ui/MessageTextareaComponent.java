@@ -7,14 +7,14 @@ import com.shine.ai.util.HtmlUtil;
 
 import javax.swing.*;
 import javax.swing.text.BadLocationException;
-import javax.swing.text.StyledDocument;
+import javax.swing.text.Document;
 import javax.swing.text.html.HTMLDocument;
 import javax.swing.text.html.HTMLEditorKit;
 import javax.swing.text.html.StyleSheet;
 import java.awt.*;
 import java.io.IOException;
 
-public class MessageTextareaComponent extends JTextPane {
+public class MessageTextareaComponent extends JEditorPane {
     private final AIAssistantSettingsState stateStore = AIAssistantSettingsState.getInstance();
 
     private final HTMLEditorKit textPaneKit;
@@ -37,7 +37,7 @@ public class MessageTextareaComponent extends JTextPane {
         String htmlContent = String.format("<div class=\"content\">%s</div>", HtmlUtil.md2html(content));
         styleSheet.addRule(String.format(".content{ padding: 6px 10px; color: #000000; background: %s; border-radius: 12px;}","#b4d6ff"));
 
-        StyledDocument document = getStyledDocument();
+        Document document = getDocument();
 
         try {
             textPaneKit.insertHTML((HTMLDocument) document, document.getLength(), htmlContent, 0, 0, null);

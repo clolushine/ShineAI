@@ -3,12 +3,19 @@ package com.shine.ai.util;
 import cn.hutool.core.img.ImgUtil;
 import com.intellij.util.ui.ImageUtil;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.net.URL;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 public class ImgUtils extends ImgUtil {
+
+    private static final ConcurrentHashMap<Object, Object>
+            imageCache = new ConcurrentHashMap<>();
 
     public static Image iconToImage(Icon icon) {
         if (icon instanceof ImageIcon) {
@@ -40,5 +47,18 @@ public class ImgUtils extends ImgUtil {
             return null;
         }
         return bi;
+    }
+
+    public static Image loadImage(String urlString) throws IOException {
+        // 使用URL作为缓存键
+        Image image = (Image) imageCache.get(urlString);
+        if (image != null) {
+            return image;
+        }
+
+        URL urlObj = new URL(urlString);
+        image = ImageIO.read(urlObj);
+        imageCache.put(urlString, image);
+        return image;
     }
 }
