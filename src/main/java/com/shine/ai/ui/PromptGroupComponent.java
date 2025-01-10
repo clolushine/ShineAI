@@ -135,7 +135,7 @@ public class PromptGroupComponent extends JBPanel<PromptGroupComponent> implemen
     }
 
     public void refreshListCounts() {
-        if (enablePrompts) {
+        if (enablePrompts && stateStore.promptsPos != 2) {
             listCountsLabel.setText("total：" + promptList.size() + " prompts");
             listCountsLabel.setForeground(JBColor.namedColor("Label.infoForeground", new JBColor(Color.decode("#ee9e26"), Color.decode("#ee9e26"))));
             setVisible(true);

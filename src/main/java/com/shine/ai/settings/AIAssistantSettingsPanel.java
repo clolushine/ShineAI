@@ -25,6 +25,8 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.*;
@@ -79,6 +81,7 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
     private final Map<Integer,String> promptsComboBoxItemsPos = new HashMap<>(){{
         put(0,"left");
         put(1,"right");
+        put(2,"hide");
     }};
 
     private boolean needRestart = false;
@@ -160,10 +163,13 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
             }
         });
 
-        enableParserCodeCheckBox.addChangeListener(e -> {
-           if (enableParserCodeCheckBox.isSelected()) {
-               BalloonUtil.showBalloon("Enabling it may cause performance issues, such as lag or stuttering.",MessageType.WARNING,enableParserCodeCheckBox);
-           }
+        enableParserCodeCheckBox.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (enableParserCodeCheckBox.isSelected()) {
+                    BalloonUtil.showBalloon("Enabling it may cause performance issues, such as lag or stuttering.", MessageType.WARNING, enableParserCodeCheckBox);
+                }
+            }
         });
     }
 

@@ -412,11 +412,25 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
         currentModel.setBorder(JBUI.Borders.emptyBottom(4));
         infoPanel.add(currentModel,BorderLayout.NORTH);
 
+        JPanel southInfoPanel = new JPanel();
+        southInfoPanel.setLayout(new BoxLayout(southInfoPanel, BoxLayout.X_AXIS));
         JLabel streamInfo = new JLabel();
         String streamInfoStr = AISetInfo.get("aiStream").getAsBoolean() ? "Stream Speed：" + AISetInfo.get("streamSpeed") : "Stream：Off";
         streamInfo.setText(streamInfoStr);
         streamInfo.setFont(JBUI.Fonts.toolbarFont());
-        infoPanel.add(streamInfo,BorderLayout.SOUTH);
+        southInfoPanel.add(streamInfo);
+
+        JLabel promptsInfo = new JLabel();
+        boolean promptsCutIn = AISetInfo.get("promptsCutIn").getAsBoolean();
+        promptsInfo.setBorder(JBUI.Borders.emptyLeft(12));
+        promptsInfo.setForeground(JBColor.namedColor("Label.infoForeground",promptsCutIn ? new JBColor(Color.decode("#ee9e26"), Color.decode("#ee9e26")) : new JBColor(Gray.x80, Gray.x8C)));
+        String promptsInfoStr = promptsCutIn ? "Prompts：On" : "Prompts：Off";
+        promptsInfo.setText(promptsInfoStr);
+        promptsInfo.setFont(JBUI.Fonts.toolbarFont());
+        southInfoPanel.add(promptsInfo);
+
+        infoPanel.add(southInfoPanel,BorderLayout.SOUTH);
+
 
         infoTopPanel.add(infoPanel,BorderLayout.WEST);
     }

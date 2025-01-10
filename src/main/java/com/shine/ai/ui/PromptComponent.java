@@ -1,27 +1,17 @@
 package com.shine.ai.ui;
 
 import com.google.gson.JsonObject;
-import com.intellij.notification.impl.ui.NotificationsUtil;
 import com.intellij.openapi.project.Project;
 import com.intellij.ui.JBColor;
 import com.intellij.ui.components.JBPanel;
-import com.intellij.ui.components.JBScrollPane;
 import com.intellij.util.ui.JBUI;
 import com.shine.ai.settings.AIAssistantSettingsState;
-import com.shine.ai.util.HtmlUtil;
-import com.shine.ai.util.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.accessibility.AccessibleContext;
 import javax.swing.*;
-import javax.swing.text.BadLocationException;
-import javax.swing.text.StyledDocument;
-import javax.swing.text.html.HTMLDocument;
-import javax.swing.text.html.HTMLEditorKit;
 import javax.swing.text.html.StyleSheet;
 import java.awt.*;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -110,7 +100,7 @@ public class PromptComponent extends JBPanel<PromptComponent> {
         messagePanel.setMinimumSize(new Dimension(getMinimumSize().width,32));
         messagePanel.setBorder(JBUI.Borders.empty(isMe ? 6 : 0));
 
-        JComponent messageTextarea = new JBScrollPane(new messageTextarea(content,isMe));
+        JComponent messageTextarea = MessageTextareaComponent(content,isMe);
         messagePanel.add(messageTextarea,BorderLayout.CENTER);
 
         centerPanel.add(messagePanel, BorderLayout.CENTER);
@@ -132,33 +122,19 @@ public class PromptComponent extends JBPanel<PromptComponent> {
         add(southPanel,BorderLayout.SOUTH); // 将 MainPanel 添加到中心
     }
 
-    public class messageTextarea extends JTextPane {
-        public messageTextarea(String content,Boolean isMe) {
-            setContentType("text/html; charset=UTF-8");
-            setFont(new Font("Microsoft YaHei", Font.PLAIN,stateStore.CHAT_PANEL_FONT_SIZE));
-            setForeground(JBColor.namedColor("Label.infoForeground", new JBColor(Color.decode("#f1f1f1"), Color.decode("#000000"))));
-            setEditable(false);
-            setOpaque(false);
-            setBorder(null);
-            NotificationsUtil.configureHtmlEditorKit(this, true);
+    public MyScrollPane MessageTextareaComponent (String content,Boolean isMe) {
+        MessageTextareaComponent textarea = new MessageTextareaComponent(content);
 
-            HTMLEditorKit kit = (HTMLEditorKit) getEditorKit();
-            StyleSheet styleSheet = kit.getStyleSheet();
+        StyleSheet styleSheet = textarea.getTextPaneKit().getStyleSheet();
+        styleSheet.addRule(String.format(".content{ padding: 6px 10px; color: #000000; background: %s; border-radius: 12px;}",isMe ? "#b4d6ff" : "#ffffff"));
+        textarea.updateUI();
 
-            styleSheet.addRule("body{ padding: 0;margin:0;}");
-            String htmlContent = String.format("<div class=\"content\">%s</div>", HtmlUtil.md2html(content));
-            styleSheet.addRule(String.format(".content{ padding: 6px 10px; color: #000000; background: %s; border-radius: 12px;}",isMe ? "#b4d6ff" : "#ffffff"));
+        MyScrollPane scrollPane = new MyScrollPane(textarea,ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER,ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
 
-//            putClientProperty(AccessibleContext.ACCESSIBLE_NAME_PROPERTY, StringUtil.unescapeXmlEntities(StringUtil.stripHtml(content, " ")));
+        SwingUtilities.invokeLater(()-> {
+            scrollPane.getHorizontalScrollBar().setValue(0);
+        });
 
-            StyledDocument document = getStyledDocument();
-
-            try {
-                kit.insertHTML((HTMLDocument) document, document.getLength(), htmlContent, 0, 0, null);
-            } catch (BadLocationException | IOException e) {
-                // 处理异常，例如打印错误信息或显示默认内容
-                setText("Error rendering content: " + e.getMessage());
-            }
-        }
+        return scrollPane;
     }
 }

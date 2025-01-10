@@ -1,7 +1,6 @@
 package com.shine.ai.ui;
 
 import com.google.gson.JsonObject;
-import com.intellij.notification.impl.ui.NotificationsUtil;
 import com.intellij.openapi.project.Project;
 import com.intellij.ui.Gray;
 import com.intellij.ui.JBColor;
@@ -10,22 +9,13 @@ import com.intellij.util.ImageLoader;
 import com.intellij.util.ui.JBUI;
 import com.shine.ai.icons.AIAssistantIcons;
 import com.shine.ai.settings.AIAssistantSettingsState;
-import com.shine.ai.util.HtmlUtil;
 import com.shine.ai.util.JsonUtil;
-import com.shine.ai.util.StringUtil;
 import com.shine.ai.util.TimeUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.accessibility.AccessibleContext;
 import javax.swing.*;
-import javax.swing.text.BadLocationException;
-import javax.swing.text.StyledDocument;
-import javax.swing.text.html.HTMLDocument;
-import javax.swing.text.html.HTMLEditorKit;
-import javax.swing.text.html.StyleSheet;
 import java.awt.*;
-import java.io.IOException;
 import java.net.URL;
 import java.util.*;
 import java.util.List;
@@ -145,10 +135,8 @@ public class MessageComponent extends JBPanel<MessageComponent> {
                         if (scaledImage != null) { // 检查图片尺寸
                             RoundImage roundImg = new RoundImage(scaledImage);
                             iconPanel.add(roundImg, BorderLayout.NORTH);
-                            SwingUtilities.invokeLater(() -> {  // 在 EDT 中更新 UI
-                                topPanel.repaint();
-                                topPanel.updateUI();
-                            });
+                            // 在 EDT 中更新 UI
+                            SwingUtilities.invokeLater(topPanel::updateUI);
                         }
                     } catch (Exception e) {
                         // ... 处理错误
@@ -196,9 +184,9 @@ public class MessageComponent extends JBPanel<MessageComponent> {
         messagePanel.setLayout(new BoxLayout(messagePanel, BoxLayout.Y_AXIS));
         messagePanel.setOpaque(false);
         messagePanel.setMinimumSize(new Dimension(getMinimumSize().width,32));
-        messagePanel.setBorder(isMe ? JBUI.Borders.emptyLeft(96) : JBUI.Borders.emptyRight(0));
+        messagePanel.setBorder(isMe ? JBUI.Borders.emptyLeft(64) : JBUI.Borders.emptyRight(0));
 
-        Component messageTextarea = isMe ? new messageTextarea(content) : createMessageAreaComponent(content);
+        Component messageTextarea = isMe ? MessageTextareaComponent(content) : createMessageAreaComponent(content);
         messagePanel.add(messageTextarea,BorderLayout.CENTER);
 
         centerPanel.add(messagePanel, BorderLayout.CENTER);
@@ -276,6 +264,17 @@ public class MessageComponent extends JBPanel<MessageComponent> {
         return textScrollPane;
     }
 
+    public MyScrollPane MessageTextareaComponent (String content) {
+        MessageTextareaComponent textarea = new MessageTextareaComponent(content);
+
+        MyScrollPane scrollPane = new MyScrollPane(textarea,ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER,ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+
+        SwingUtilities.invokeLater(()-> {
+            scrollPane.getHorizontalScrollBar().setValue(0);
+        });
+
+        return scrollPane;
+    }
 
     public RoundPanel createMessageAreaComponent(String content) {
         messageAreaPanel = new RoundPanel();
@@ -312,38 +311,6 @@ public class MessageComponent extends JBPanel<MessageComponent> {
         messageAreaPanel.add(TextPaneAreaComponent(content));
 
         return messageAreaPanel; // 返回 JTextPane
-    }
-
-    public class messageTextarea extends JTextPane {
-        public messageTextarea(String content) {
-            setEditable(false);
-            setOpaque(false);
-            setContentType("text/html; charset=UTF-8");
-            setFont(new Font("Microsoft YaHei", Font.PLAIN,stateStore.CHAT_PANEL_FONT_SIZE));
-            setForeground(JBColor.namedColor("Label.infoForeground", new JBColor(Color.decode("#f1f1f1"), Color.decode("#000000"))));
-            setEditable(false);
-            setOpaque(false);
-            setBorder(null);
-            NotificationsUtil.configureHtmlEditorKit(this, true);
-
-            HTMLEditorKit kit = (HTMLEditorKit) getEditorKit();
-            StyleSheet styleSheet = kit.getStyleSheet();
-
-            styleSheet.addRule("body{ padding: 0;margin:0;}");
-            String htmlContent = String.format("<div class=\"content\">%s</div>", HtmlUtil.md2html(content));
-            styleSheet.addRule(String.format(".content{ padding: 6px 10px; color: #000000; background: %s; border-radius: 12px;}","#b4d6ff"));
-
-            putClientProperty(AccessibleContext.ACCESSIBLE_NAME_PROPERTY, StringUtil.unescapeXmlEntities(StringUtil.stripHtml(content, " ")));
-
-            StyledDocument document = getStyledDocument();
-
-            try {
-                kit.insertHTML((HTMLDocument) document, document.getLength(), htmlContent, 0, 0, null);
-            } catch (BadLocationException | IOException e) {
-                // 处理异常，例如打印错误信息或显示默认内容
-                setText("Error rendering content: " + e.getMessage());
-            }
-        }
     }
 
     public void updateContent(JsonObject newData) {
