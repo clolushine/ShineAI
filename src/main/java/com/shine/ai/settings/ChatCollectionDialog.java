@@ -265,7 +265,7 @@ public class ChatCollectionDialog extends JDialog {
             String collTitle = item.get("collectionTitle").getAsString();
             String collUpdateTime = TimeUtil.timeFormat(item.get("updateat").getAsLong(),"YYYYMMDDHHmmss");
             assert collTitle != null;
-            String fileName = !collTitle.isEmpty() ? collTitle.substring(0, Math.min(collTitle.length(), 5)) + collUpdateTime : item.get("collId").getAsString() + collUpdateTime;
+            String fileName = !collTitle.isEmpty() ? collTitle.substring(0, Math.min(collTitle.length(), 20)) + collUpdateTime : item.get("collId").getAsString() + collUpdateTime;
             FileUtil.exportToJson(item,fileName,component);
         });
         return exportAction;

@@ -14,6 +14,7 @@ import com.intellij.util.xmlb.XmlSerializerUtil;
 import com.intellij.util.xmlb.annotations.Tag;
 import com.shine.ai.icons.AIAssistantIcons;
 import com.shine.ai.message.MsgEntryBundle;
+import com.shine.ai.util.FileUtil;
 import com.shine.ai.util.GeneratorUtil;
 import com.shine.ai.util.StringUtil;
 import org.jetbrains.annotations.NotNull;
@@ -185,7 +186,13 @@ public class AIAssistantSettingsState implements PersistentStateComponent<AIAssi
   public List<String> customActionsPrefix = new ArrayList<>();
 
   public static AIAssistantSettingsState getInstance() {
-      return ApplicationManager.getApplication().getService(AIAssistantSettingsState.class);
+    AIAssistantSettingsState state = ApplicationManager.getApplication().getServiceIfCreated(AIAssistantSettingsState.class);
+    if (state == null) {
+      saveState();
+    }else {
+      return state;
+    }
+    return ApplicationManager.getApplication().getService(AIAssistantSettingsState.class);
   }
 
   @Nullable
@@ -203,7 +210,7 @@ public class AIAssistantSettingsState implements PersistentStateComponent<AIAssi
     loadState(this);
   }
 
-  public void saveState() {
+  public static void saveState() {
     ApplicationManager.getApplication().saveSettings(); // 保存更改
   }
 
@@ -216,9 +223,9 @@ public class AIAssistantSettingsState implements PersistentStateComponent<AIAssi
     chatCollection.addProperty("collectionSubTitle","");
     chatCollection.add("collectionExtra",null);
 
-    List<JsonObject> chatList = new ArrayList<>();
-    JsonObject chatItem = new JsonObject();
+    JsonArray chatList = new JsonArray();
 
+    JsonObject chatItem = new JsonObject();
     chatItem.addProperty("time", GeneratorUtil.getTimestamp());
     chatItem.addProperty("icon", AIAssistantIcons.AI_URL);
     chatItem.addProperty("name", MsgEntryBundle.message("ui.setting.server.default.name"));
@@ -230,15 +237,13 @@ public class AIAssistantSettingsState implements PersistentStateComponent<AIAssi
     chatItem.addProperty("isPin", false);
     chatItem.addProperty("showBtn", false);
     chatItem.addProperty("withContent", "");
+    // 附件。数组格式
+    chatItem.add("attachments", new JsonArray());
+
     chatList.add(chatItem);
 
     // 使用JsonArray添加数组元素
-    JsonArray jsonArrayChatList = new JsonArray();
-    for (JsonObject item : chatList) {
-      jsonArrayChatList.add(item);  // 将每个 JsonObject 添加到 JsonArray
-    }
-
-    chatCollection.add("chatList", jsonArrayChatList);
+    chatCollection.add("chatList", chatList);
 
     return gson.toJson(chatCollection);
   }
@@ -302,6 +307,18 @@ public class AIAssistantSettingsState implements PersistentStateComponent<AIAssi
       System.out.println("getJsonObject: exception" + e.getMessage());
     }
     return outputObject;
+  }
+
+  public <T> JsonArray createJsonArray(List<T> list) {
+    JsonArray jsonArray = new JsonArray();
+    for (T item : list) {
+      try {
+        jsonArray.add(gson.toJsonTree(item));
+      } catch (Exception e) {
+        System.err.println("createJsonArray: exception" + e.getMessage());
+      }
+    }
+    return jsonArray;
   }
 
   public JsonArray getJsonArray(List<JsonObject> list) {
@@ -370,5 +387,17 @@ public class AIAssistantSettingsState implements PersistentStateComponent<AIAssi
       System.out.println("getStorageUsageMBInfo: exception" + e.getMessage());
     }
     return "0mb" + "/" + MAX_STORAGE_SIZE_MB + "mb";
+  }
+
+  public String getCacheUsageMBInfo() {
+    try {
+      Path cacheDir = FileUtil.cachePath;
+      long fileSizeBytes = FileUtil.getFolderSize(cacheDir.toFile());
+      double fileSizeMB = fileSizeBytes / (1024.0 * 1024.0);
+      return String.format("%.2f",fileSizeMB) + "mb";
+    } catch (Exception e) {
+      System.out.println("getCacheUsageMBInfo: exception" + e.getMessage());
+    }
+    return "0mb";
   }
 }

@@ -1,5 +1,6 @@
 package com.shine.ai.core;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.intellij.notification.Notification;
 import com.intellij.notification.NotificationType;
@@ -45,11 +46,19 @@ public class SendAction extends AnAction {
     public void actionPerformed(@NotNull AnActionEvent e) {
         Project project = e.getProject();
         Object mainPanel = project.getUserData(ACTIVE_CONTENT);
-        doActionPerformed((MainPanel) mainPanel, data);
+        doActionPerformed((MainPanel) mainPanel, data,null);
     }
 
     private boolean presetCheck() {
-        if (StringUtil.isEmpty(stateStore.Useremail) | StringUtil.isEmpty(stateStore.UserToken)) {
+        if (stateStore == null) {
+            Notifications.Bus.notify(
+                    new Notification(MsgEntryBundle.message("group.id"),
+                            "Wrong setting",
+                            "Please login ShineAI first.",
+                            NotificationType.ERROR));
+            return false;
+        }
+        if (StringUtil.isEmpty(stateStore.Useremail) || StringUtil.isEmpty(stateStore.UserToken)) {
             Notifications.Bus.notify(
                     new Notification(MsgEntryBundle.message("group.id"),
                             "Wrong setting",
@@ -91,7 +100,7 @@ public class SendAction extends AnAction {
         return AIHandler;
     }
 
-    public void doActionPerformed(MainPanel mainPanel, String content) {
+    public void doActionPerformed(MainPanel mainPanel, String content, JsonArray attachments) {
         if (!presetCheck()) {
             return;
         }
@@ -102,18 +111,27 @@ public class SendAction extends AnAction {
         if (StringUtils.isEmpty(content)) {
             return;
         }
+        boolean isRerun = attachments != null;
+
         // Reset the question container
-        mainPanel.getInputTextArea().getTextarea().setText("");
+        if(!isRerun) mainPanel.getInputTextArea().getTextarea().setText("");
         mainPanel.aroundRequest(true);
 
         MessageGroupComponent contentPanel = mainPanel.getContentPanel();
-
-        JsonObject messageMy = mainPanel.getContentPanel().MyInfo.deepCopy();
-        JsonObject messageAi =  mainPanel.getContentPanel().AIInfo.deepCopy();
+        JsonObject messageMy = contentPanel.MyInfo.deepCopy();
+        JsonObject messageAi =  contentPanel.AIInfo.deepCopy();
 
         messageMy.addProperty("chatId", GeneratorUtil.generateWithUUID());
         messageMy.addProperty("time",GeneratorUtil.getTimestamp());
         messageMy.addProperty("content",content);
+
+        if (!isRerun) {
+            messageMy.add("attachments",contentPanel.getUploadList()); // 重发也不添加上传附件
+            contentPanel.removeUploadList(); // 重发不清空上传附件，否则清空
+        }else {
+            messageMy.add("attachments",attachments);
+        }
+        
         MessageComponent messageMyComponent = contentPanel.add(messageMy);
         messageMyComponent.messageActions.setDisabledRerunAndTrash(true); // 禁用按钮
 
@@ -123,18 +141,18 @@ public class SendAction extends AnAction {
         messageAIComponent.messageActions.setDisabled(true); // 禁用按钮
 
         AbstractHandler AIHandler = getAIHandler(mainPanel);
-        MessageComponent AIAnswer = mainPanel.getContentPanel().getLastItem(null);
+        MessageComponent AIAnswer = contentPanel.getLastItem(null);
         try {
             ExecutorService executorService = mainPanel.getExecutorService();
             // Request the server
             if (!getAISetInfo(mainPanel).get("aiStream").getAsBoolean()) {
                 executorService.submit(() -> {
-                    Call handle = AIHandler.handle(mainPanel, AIAnswer, content);
-                    mainPanel.getContentPanel().setRequestHolder(handle);
+                    Call handle = AIHandler.handle(mainPanel, AIAnswer, messageMy);
+                    contentPanel.setRequestHolder(handle);
                 });
             } else {
-                EventSource handle = AIHandler.handleStream(mainPanel, AIAnswer, content);
-                mainPanel.getContentPanel().setRequestHolder(handle);
+                EventSource handle = AIHandler.handleStream(mainPanel, AIAnswer, messageMy);
+                contentPanel.setRequestHolder(handle);
             }
         } catch (Exception e) {
             mainPanel.aroundRequest(false);

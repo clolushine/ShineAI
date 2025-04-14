@@ -1,5 +1,6 @@
 package com.shine.ai;
 
+import com.google.gson.JsonObject;
 import com.shine.ai.core.TokenManager;
 import com.shine.ai.core.builder.OfficialBuilder;
 import com.shine.ai.ui.MainPanel;
@@ -28,12 +29,12 @@ public class RequestProvider {
         return header;
     }
 
-    public RequestProvider create(MainPanel mainPanel, String question,String url) {
+    public RequestProvider create(MainPanel mainPanel, JsonObject messageMy, String url) {
         RequestProvider provider = new RequestProvider();
 
         provider.url = baseUrl + url;
         provider.header = TokenManager.getInstance().getShineAIHeaders();
-        provider.data = OfficialBuilder.buildShineAI(question,mainPanel.getContentPanel());
+        provider.data = OfficialBuilder.buildShineAI(messageMy,mainPanel.getContentPanel());
 
         return provider;
     }

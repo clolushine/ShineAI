@@ -68,6 +68,7 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
     private JPanel signPanel;
     private JComboBox<String> PromptsPosComboBox;
     private JCheckBox enableParserCodeCheckBox;
+    private JLabel cacheUsedInfoStringField;
 
     private LoadingButton logoutButton;
     private LoadingButton loginButton;
@@ -86,7 +87,7 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
 
     private boolean needRestart = false;
 
-    public static final String SHINE_AI_BASE_URL = "https://34343433.xyz";
+    public static final String SHINE_AI_BASE_URL = "https://v.34343433.xyz/api";
 
     public AIAssistantSettingsPanel() {
         createSignLink();
@@ -105,6 +106,8 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
         dialogFontSizeSpinner.setModel(fontSizeModel);
 
         PromptsPosComboBox.setModel(new DefaultComboBoxModel<>(promptsComboBoxItemsPos.values().toArray(new String[0])));
+
+        updateCacheUsedInfo(); // 更新缓存使用情况
 
         updateStorageUsedInfo(); // 更新storage缓存使用信息
 
@@ -399,5 +402,12 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
         storageUsedInfoStringField.setForeground(storageUsedInfoStringColor);
         storageUsedInfoStringField.setText(percentage + "%");
         storageUsedMBField.setText(state.getStorageUsageMBInfo());
+    }
+
+    public void updateCacheUsedInfo() {
+        AIAssistantSettingsState state = AIAssistantSettingsState.getInstance();
+        assert cacheUsedInfoStringField != null;
+        String infoStr = state.getCacheUsageMBInfo();
+        cacheUsedInfoStringField.setText(infoStr);
     }
 }

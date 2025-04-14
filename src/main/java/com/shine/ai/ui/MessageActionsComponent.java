@@ -1,6 +1,7 @@
 package com.shine.ai.ui;
 
 import cn.hutool.core.swing.clipboard.ClipboardUtil;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.intellij.icons.AllIcons;
 import com.intellij.openapi.project.Project;
@@ -37,6 +38,13 @@ public class MessageActionsComponent extends JPanel {
 
         String chatId = chatItem.get("chatId").getAsString();
 
+        JsonArray attachments;
+        if (chatItem.has("attachments") && !chatItem.get("attachments").isJsonNull()) {
+            attachments = chatItem.get("attachments").getAsJsonArray();
+        }else {
+            attachments = new JsonArray();
+        }
+
         setDoubleBuffered(true);
         setOpaque(true);
         setBorder(JBUI.Borders.empty());
@@ -49,7 +57,7 @@ public class MessageActionsComponent extends JPanel {
         actionButtons.add(editAction);
 
         if (Boolean.TRUE.equals(isMe)) {
-            refreshAction = getRefreshAction(component, content);
+            refreshAction = getRefreshAction(component, content,attachments);
             add(refreshAction);
             actionButtons.add(refreshAction);
         }
@@ -67,11 +75,11 @@ public class MessageActionsComponent extends JPanel {
         actionButtons.add(copyAction);
     }
 
-    private static @NotNull IconButton getRefreshAction(JComponent component, String contentStr) {
+    private static @NotNull IconButton getRefreshAction(JComponent component, String contentStr,JsonArray attachments) {
         IconButton refreshAction = new IconButton("rerun",AllIcons.Actions.Refresh);
         refreshAction.addActionListener(e -> {
             SendAction sendAction = _project.getService(SendAction.class);
-            sendAction.doActionPerformed(getMainPanel(),contentStr);
+            sendAction.doActionPerformed(getMainPanel(),contentStr,attachments);
         });
         return refreshAction;
     }
@@ -131,6 +139,9 @@ public class MessageActionsComponent extends JPanel {
     public void setDisabledRerunAndTrash(Boolean disable) {
         if (refreshAction!=null) {
             refreshAction.setEnabled(!disable);
+        }
+        if (pinAction!=null) {
+            pinAction.setEnabled(!disable);
         }
         if (trashAction!=null) {
             trashAction.setEnabled(!disable);

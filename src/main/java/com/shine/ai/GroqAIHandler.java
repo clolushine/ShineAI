@@ -34,8 +34,8 @@ public class GroqAIHandler extends AbstractHandler {
     private Call requestCall = null;
     private EventSource requestEvent = null;
 
-    public Request createRequest(MainPanel mainPanel, String question) {
-        RequestProvider provider = new RequestProvider().create(mainPanel, question, "/gpt/gptChat");
+    public Request createRequest(MainPanel mainPanel, JsonObject messageMy) {
+        RequestProvider provider = new RequestProvider().create(mainPanel, messageMy, "/gpt/gptChat");
         return new Request.Builder()
                 .url(provider.getUrl())
                 .headers(Headers.of(provider.getHeader()))
@@ -53,9 +53,9 @@ public class GroqAIHandler extends AbstractHandler {
         return builder.build();
     }
 
-    public Call handle(MainPanel mainPanel, MessageComponent component, String question) {
+    public Call handle(MainPanel mainPanel, MessageComponent component, JsonObject messageMy) {
         try {
-            Request request = createRequest(mainPanel,question);
+            Request request = createRequest(mainPanel,messageMy);
             OkHttpClient httpClient = createHttpClient();
             requestCall = httpClient.newCall(request);
             requestCall.enqueue(new Callback() {
@@ -67,7 +67,7 @@ public class GroqAIHandler extends AbstractHandler {
 
                 @Override
                 public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
-                    handleResponse(response,component,mainPanel,question);
+                    handleResponse(response,component,mainPanel,messageMy);
                     response.close();
                 }
             });
@@ -80,7 +80,7 @@ public class GroqAIHandler extends AbstractHandler {
         return requestCall;
     }
 
-    private void handleResponse (@NotNull Response response, MessageComponent component, MainPanel mainPanel,String question) throws IOException {
+    private void handleResponse (@NotNull Response response, MessageComponent component, MainPanel mainPanel,JsonObject messageMy) throws IOException {
         if (response.code() == 401) {
             synchronized (requestLock) { // 同步代码块，防止并发刷新 Token
                 if (!requestRetry) {  // 双重检查锁，确保只刷新一次 Token
@@ -97,7 +97,7 @@ public class GroqAIHandler extends AbstractHandler {
                             try {
                                 get(); // 获取 doInBackground() 的结果，如果发生异常，会在这里抛出
                                 System.out.println("done");
-                                requestCall = handle(mainPanel, component, question); // 刷新 Token 成功后，重试请求
+                                requestCall = handle(mainPanel, component, messageMy); // 刷新 Token 成功后，重试请求
                             } catch (InterruptedException | ExecutionException e) {
                                 throw new RuntimeException(e);
                             }
@@ -138,9 +138,9 @@ public class GroqAIHandler extends AbstractHandler {
     }
 
 
-    public EventSource handleStream(MainPanel mainPanel, MessageComponent component, String question) {
+    public EventSource handleStream(MainPanel mainPanel, MessageComponent component, JsonObject messageMy) {
         try {
-            Request request = createRequest(mainPanel,question);
+            Request request = createRequest(mainPanel,messageMy);
             OkHttpClient httpClient = createHttpClient();
             EventSource.Factory factory = EventSources.createFactory(httpClient);
             EventSourceListener listener = new EventSourceListener() {
@@ -180,7 +180,7 @@ public class GroqAIHandler extends AbstractHandler {
                                 handleStreamErrorData(component,mainPanel);
                             }
                         }else {
-                            handleStreamResponse(response,component,mainPanel,question);
+                            handleStreamResponse(response,component,mainPanel,messageMy);
                             response.close();
                         }
                     } catch (IOException e) {
@@ -213,7 +213,7 @@ public class GroqAIHandler extends AbstractHandler {
         component.updateMessage(event);
     }
 
-    private void handleStreamResponse (@NotNull Response response, MessageComponent component, MainPanel mainPanel,String question) throws IOException {
+    private void handleStreamResponse (@NotNull Response response, MessageComponent component, MainPanel mainPanel,JsonObject messageMy) throws IOException {
         if (response.code() == 401) {
             synchronized (requestLock) { // 同步代码块，防止并发刷新 Token
                 if (!requestRetry) {  // 双重检查锁，确保只刷新一次 Token
@@ -230,7 +230,7 @@ public class GroqAIHandler extends AbstractHandler {
                             try {
                                 get(); // 获取 doInBackground() 的结果，如果发生异常，会在这里抛出
                                 System.out.println("done");
-                                handleStream(mainPanel, component, question); // 刷新 Token 成功后，重试请求
+                                handleStream(mainPanel, component, messageMy); // 刷新 Token 成功后，重试请求
                             } catch (InterruptedException | ExecutionException e) {
                                 throw new RuntimeException(e);
                             }

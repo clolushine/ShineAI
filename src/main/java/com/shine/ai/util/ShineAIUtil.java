@@ -1,5 +1,6 @@
 package com.shine.ai.util;
 
+import cn.hutool.core.io.resource.FileResource;
 import cn.hutool.http.HttpUtil;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -17,6 +18,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
+import java.awt.*;
+import java.io.File;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -32,30 +36,43 @@ public class ShineAIUtil {
 
     public static boolean isLoginDialogShown = false; // 静态变量，跟踪弹窗状态
 
-    public static String request(String url,String method, JsonObject options, Integer retry) {
+    public static String request(String url,String method, Object options, Integer retry) {
         String URL = baseUrl +  url;
         int reCount = retry > 0 ? retry : 0;
         try {
             String response;
             switch (method.toUpperCase()) { // 将 method 转换为大写进行比较
                 case "GET":
+                    assert options instanceof JsonObject;
+                    JsonObject getBody = (JsonObject) options;
                     StringBuilder newUrl = new StringBuilder(baseUrl + url + "?"); // 基础 URL 和路径
-                    for (Map.Entry<String, JsonElement> entry : options.entrySet()) {
+                    for (Map.Entry<String, JsonElement> entry : getBody.entrySet()) {
                         String key = entry.getKey();
                         String value = entry.getValue().toString().replace("\"","");
                         newUrl.append(key).append("=").append(value).append("&");  // 直接拼接参数，不使用 urlBuilder
                     }
                     newUrl = new StringBuilder(newUrl.substring(0, newUrl.length() - 1)); // 去除最后一个 "&"
                     response = HttpUtil.createGet(String.valueOf(newUrl))
-                            .header("Authorization", "Bearer " + state.UserToken)
+                            .bearerAuth(state.UserToken)
                             .timeout(timeout)
                             .execute().body();
                     break;
                 case "POST":
+                    assert options instanceof JsonObject;
+                    JsonObject postBody = (JsonObject) options;
                     response = HttpUtil.createPost(URL)
                             .header("Content-Type", "application/json")
-                            .header("Authorization", "Bearer " + state.UserToken)
-                            .body(options.toString())
+                            .bearerAuth(state.UserToken)
+                            .body(postBody.toString())
+                            .timeout(timeout)
+                            .execute().body();
+                    break;
+                case "UPLOAD":
+                    assert options instanceof HashMap<?,?>;
+                    Map<String,Object> uploadBody = (Map<String, Object>) options;
+                    response = HttpUtil.createPost(URL)
+                            .bearerAuth(state.UserToken)
+                            .form(uploadBody)
                             .timeout(timeout)
                             .execute().body();
                     break;
@@ -202,5 +219,68 @@ public class ShineAIUtil {
                     "GetAIModels failed, error: " + e.getMessage());
         }
         return models;
+    }
+
+    public static JsonObject uploadImg(Image image, JComponent component) {
+        JsonObject returnData = new JsonObject();
+
+        // 1. 构建 form-data 参数
+        Map<String, Object> formData = new HashMap<>();// 表单格式
+
+        String URL =  "/upload/uploadD2";
+        if (state.getUserInfo().has("id")) {
+            formData.put("uid", state.getUserInfo().get("id").getAsString());
+        }
+        try {
+            File imageFile = ImgUtils.convertImageByThumbnails(image,"jpg",GeneratorUtil.generateWithUUID() + "_image",0.8f);
+            if (imageFile != null) {
+                FileResource fileResource = new FileResource(new File(imageFile.getPath()), imageFile.getName());
+                returnData.addProperty("fileName",imageFile.getName());
+                formData.put("file", fileResource);
+            }
+
+            String grants = request(URL,"UPLOAD",formData,0);
+            JsonObject object = JsonParser.parseString(grants).getAsJsonObject();
+            System.out.println(object);
+            if (object.get("code").getAsInt() == 0 && object.has("data")) {
+                JsonObject resData = object.get("data").getAsJsonObject(); // 解构data
+                if (resData.has("url")) {
+                    System.out.println(resData.get("url").getAsString());
+                    returnData.addProperty("url",resData.get("url").getAsString());
+                };
+            }
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            LOG.info("ShineAIUtil uploadImg: exception={}",e.getMessage());
+        }
+        return returnData;
+    }
+
+    public static String getImageUrl(String fileName, JComponent component) {
+        JsonObject params = new JsonObject();
+        String imageUrl = "";
+
+        String URL = "/upload/getD2file";
+
+        if (state.getUserInfo().has("id")) {
+            params.addProperty("uid", state.getUserInfo().get("id").getAsString());
+        }
+        params.addProperty("fileName", fileName);
+
+        try {
+            String grants = request(URL,"GET",params,0);
+            System.out.println(grants);
+            JsonObject object = JsonParser.parseString(grants).getAsJsonObject();
+            if (object.get("code").getAsInt() == 0 && object.has("data")) {
+                JsonObject resData = object.get("data").getAsJsonObject(); // 解构data
+                if (resData.has("url")) {
+                    imageUrl = resData.get("url").getAsString();
+                };
+            }
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            LOG.info("ShineAIUtil getImageUrl: exception={}",e.getMessage());
+        }
+        return imageUrl;
     }
 }

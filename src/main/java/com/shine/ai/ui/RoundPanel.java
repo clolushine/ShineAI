@@ -8,13 +8,16 @@ public class RoundPanel extends JComponent {
     private int arcWidth = 10;
     private int arcHeight = 10;
 
-    public RoundPanel(BorderLayout borderLayout) {
+    public RoundPanel(LayoutManager borderLayout) {
         super();
+        setDoubleBuffered(true);
         setOpaque(true); // 关键修改：确保面板不透明
         setLayout(borderLayout);
     }
 
     public RoundPanel() {
+        super();
+        setDoubleBuffered(true);
         setOpaque(true); // 关键修改：确保面板不透明
     }
 
@@ -26,16 +29,16 @@ public class RoundPanel extends JComponent {
 
     @Override
     protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g.create();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        // 先绘制默认背景
+        super.paintComponent(g2);
 
         g2.setColor(getBackground()); // 使用面板的背景颜色
 
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        // 设置圆角剪裁区域
-        g2.setClip(new RoundRectangle2D.Double(0, 0, getWidth(), getHeight(), arcWidth, arcHeight));
         // 绘制圆角矩形
-        g2.fillRect(0, 0, getWidth(), getHeight());
+        g2.fill(new RoundRectangle2D.Double(0, 0, getWidth(), getHeight(), this.arcWidth, this.arcHeight));
 
         g2.dispose();
     }

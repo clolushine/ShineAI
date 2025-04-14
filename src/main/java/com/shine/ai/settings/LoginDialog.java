@@ -56,11 +56,11 @@ public class LoginDialog extends JDialog {
                             Timer timer = new Timer(1500, new ActionListener() {
                                 @Override
                                 public void actionPerformed(ActionEvent e) {
-                                    // 在 EDT 中执行你的代码
+                                    dispose();
+                                    ShineAIUtil.isLoginDialogShown = false; // 将状态改回
                                     SwingUtilities.invokeLater(() -> {
-                                        ShineAIUtil.isLoginDialogShown = false; // 将状态改回
+                                        // 在 EDT 中执行你的代码
                                         messageBus.syncPublisher(LoginSuccessListener.TOPIC).loginSuccessful();
-                                        dispose();
                                     });
                                     ((Timer)e.getSource()).stop(); //  停止 Timer，只执行一次
                                 }

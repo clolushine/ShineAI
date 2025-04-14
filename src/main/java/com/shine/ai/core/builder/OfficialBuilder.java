@@ -7,7 +7,7 @@ import com.shine.ai.ui.MessageGroupComponent;
 
 
 public class OfficialBuilder {
-    public static String buildShineAI(String text, MessageGroupComponent component) {
+    public static String buildShineAI(JsonObject messageObject, MessageGroupComponent component) {
         AIAssistantSettingsState stateStore = AIAssistantSettingsState.getInstance();
 
         JsonObject options = new JsonObject();
@@ -16,7 +16,9 @@ public class OfficialBuilder {
         JsonObject ChatCollection = component.getChatCollection();
         JsonObject OutputConf = component.getAISetOutputInfo();
 
-        options.addProperty("content",text);
+        options.addProperty("content",messageObject.get("content").getAsString());
+        options.add("attachments", messageObject.get("attachments").getAsJsonArray());
+
         options.addProperty("name",UserInfo.get("name").getAsString());
         options.addProperty("uid",UserInfo.get("id").getAsString());
         options.addProperty("collId", ChatCollection.get("collId").getAsString());
@@ -30,12 +32,5 @@ public class OfficialBuilder {
             options.add("prompts", prompts);
         }
         return stateStore.getJsonString(options);
-    }
-
-    private static JsonObject message(String role, String text) {
-        JsonObject message = new JsonObject();
-        message.addProperty("role",role);
-        message.addProperty("content",text);
-        return message;
     }
 }

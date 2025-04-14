@@ -1,5 +1,6 @@
 package com.shine.ai.ui;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.intellij.openapi.project.Project;
 import com.intellij.ui.Gray;
@@ -9,9 +10,7 @@ import com.intellij.util.ImageLoader;
 import com.intellij.util.ui.JBUI;
 import com.shine.ai.icons.AIAssistantIcons;
 import com.shine.ai.settings.AIAssistantSettingsState;
-import com.shine.ai.util.ImgUtils;
-import com.shine.ai.util.JsonUtil;
-import com.shine.ai.util.TimeUtil;
+import com.shine.ai.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -89,6 +88,13 @@ public class MessageComponent extends JBPanel<MessageComponent> {
         int status = chatItemData.get("status").getAsInt();
         String withContent = chatItemData.get("withContent").getAsString();
 
+        JsonArray attachments;
+        if (chatItemData.has("attachments") && !chatItemData.get("attachments").isJsonNull()) {
+            attachments = chatItemData.get("attachments").getAsJsonArray();
+        }else {
+            attachments = new JsonArray();
+        }
+
         JPanel northPanel = new JPanel(new BorderLayout());
         northPanel.setOpaque(false);
         northPanel.setBorder(JBUI.Borders.empty());
@@ -98,26 +104,6 @@ public class MessageComponent extends JBPanel<MessageComponent> {
         if (stateStore.enableAvatar && showActions) {
             JPanel iconPanel = new JPanel(new BorderLayout());
             iconPanel.setOpaque(true);
-//            Image imageIcon;
-//            try {
-//                InputStream inputStream = getClass().getResourceAsStream(avatar); // 注意开头的斜杠
-//                if (inputStream != null) {
-//                    imageIcon = new ImageIcon(ImageIO.read(inputStream)).getImage();
-//                } else {
-//                    imageIcon = isMe ? ImgUtils.iconToImage(AIAssistantIcons.ME) : ImgUtils.iconToImage(AIAssistantIcons.AI);
-//                }
-//            } catch (IOException e) {
-//                imageIcon = isMe ? ImgUtils.iconToImage(AIAssistantIcons.ME) : ImgUtils.iconToImage(AIAssistantIcons.AI);
-//            }
-//            try {
-//                imageIcon = ImgUtils.getImage(new URL(avatar));
-//            } catch (Exception e) {
-//                imageIcon = isMe ? ImgUtils.iconToImage(AIAssistantIcons.ME) : ImgUtils.iconToImage(AIAssistantIcons.AI);
-//            }
-//            Image scale = ImageLoader.scaleImage(imageIcon,32, 32);
-//            RoundImage roundImg = new RoundImage(scale);
-//            iconPanel.add(roundImg, BorderLayout.NORTH);
-
             new SwingWorker<>() {
                 @Override
                 protected Image doInBackground() throws Exception {
@@ -185,9 +171,9 @@ public class MessageComponent extends JBPanel<MessageComponent> {
         messagePanel.setLayout(new BoxLayout(messagePanel, BoxLayout.Y_AXIS));
         messagePanel.setOpaque(false);
         messagePanel.setMinimumSize(new Dimension(getMinimumSize().width,32));
-        messagePanel.setBorder(isMe ? JBUI.Borders.emptyLeft(64) : JBUI.Borders.emptyRight(0));
+        messagePanel.setBorder(isMe ? JBUI.Borders.emptyLeft(48) : JBUI.Borders.emptyRight(0));
 
-        Component messageTextarea = isMe ? MessageTextareaComponent(content) : createMessageAreaComponent(content);
+        Component messageTextarea = isMe ? MessageTextareaComponent(content,attachments) : createMessageAreaComponent(content);
         messagePanel.add(messageTextarea,BorderLayout.CENTER);
 
         centerPanel.add(messagePanel, BorderLayout.CENTER);
@@ -265,16 +251,20 @@ public class MessageComponent extends JBPanel<MessageComponent> {
         return textScrollPane;
     }
 
-    public MyScrollPane MessageTextareaComponent (String content) {
-        MessageTextareaComponent textarea = new MessageTextareaComponent(content);
-
-        MyScrollPane scrollPane = new MyScrollPane(textarea,ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER,ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-
-        SwingUtilities.invokeLater(()-> {
-            scrollPane.getHorizontalScrollBar().setValue(0);
-        });
-
-        return scrollPane;
+    public RoundPanel MessageTextareaComponent (String content,JsonArray attachments) {
+        RoundPanel messagePanel = new RoundPanel();
+        messagePanel.setLayout(new BoxLayout(messagePanel,BoxLayout.Y_AXIS));
+        messagePanel.add(new MessageTextareaComponent(content,Color.decode("#b4d6ff")));
+        for (int i = 0; i < attachments.size(); i++) {
+            JsonObject item = attachments.get(i).getAsJsonObject();
+            if (item.has("type") && StringUtil.equals(item.get("type").getAsString(),"image")) {
+                ImageViewInMessage imageView = new ImageViewInMessage(null,item.get("fileName").getAsString(),256);
+                messagePanel.add(Box.createRigidArea(new Dimension(0, 8))); // 上间距
+                messagePanel.add(imageView);
+                if (i != attachments.size() - 1) messagePanel.add(Box.createRigidArea(new Dimension(0, 8))); // 下间距
+            }
+        }
+        return messagePanel;
     }
 
     public RoundPanel createMessageAreaComponent(String content) {
@@ -417,6 +407,7 @@ public class MessageComponent extends JBPanel<MessageComponent> {
             break;
             case "done":
                 updateStatusContent(1);
+                updateContentToState();
                 break;
             case "error":
                 if (!textPane.getText().isBlank() && !message.isJsonNull()) {
@@ -433,6 +424,7 @@ public class MessageComponent extends JBPanel<MessageComponent> {
                 break;
             case "abort":
                 updateStatusContent(-3);
+                updateContentToState();
                 break;
             case "message:done":
                 if (message.has("content")) {
@@ -441,6 +433,7 @@ public class MessageComponent extends JBPanel<MessageComponent> {
                 // 处理一下带finishReason的
                 updateWithContent(withContent);
                 updateStatusContent(1);
+                updateContentToState();
             break;
             case "message:err":
                 if (message.isJsonObject() && !message.has("content")) {
@@ -451,9 +444,9 @@ public class MessageComponent extends JBPanel<MessageComponent> {
                     }
                 }
                 updateStatusContent(-2);
+                updateContentToState();
                 break;
         }
-        updateContentToState();
     }
 
     public void updateContentToState() {

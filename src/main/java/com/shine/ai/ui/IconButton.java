@@ -20,6 +20,8 @@ import java.util.ArrayList;
 public class IconButton extends JPanel {
     public IconLabelButton button;
 
+    public JLabel label;
+
     public Icon buttonIcon;
 
     // 添加 ActionListener 列表和触发方法
@@ -27,6 +29,7 @@ public class IconButton extends JPanel {
 
     public IconButton(String text,@NotNull Icon icon) {
         setOpaque(false);
+        setLayout(new FlowLayout(FlowLayout.LEFT));
 
         this.buttonIcon = icon;
 
@@ -49,8 +52,10 @@ public class IconButton extends JPanel {
                 }
             }
         });
-
         add(button);
+
+        label = new JLabel();
+        add(label);
     }
 
     @Override  //  正确重写 setEnabled 方法
@@ -66,6 +71,17 @@ public class IconButton extends JPanel {
 
     public void setText(String text) {
         button.setText(text);
+    }
+
+    public void setLabel(String text) {
+        label.setText(text);
+    }
+
+    public void doClick() {
+        // 手动创建一个 MouseEvent 对象
+        MouseEvent me = new MouseEvent(button, MouseEvent.MOUSE_CLICKED, System.currentTimeMillis(), 0, 0, 0, 1, false);
+        // 直接调用 mouseListener 的 mouseClicked 方法
+        button.dispatchEvent(me);
     }
 
     private Icon createGrayIcon(Icon icon) {

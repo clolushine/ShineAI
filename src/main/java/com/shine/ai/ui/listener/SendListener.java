@@ -30,7 +30,7 @@ public class SendListener implements ActionListener,KeyListener {
             return;
         }
         SendAction sendAction = mainPanel.getProject().getService(SendAction.class);
-        sendAction.doActionPerformed(mainPanel,content);
+        sendAction.doActionPerformed(mainPanel,content,null);
     }
 
     @Override

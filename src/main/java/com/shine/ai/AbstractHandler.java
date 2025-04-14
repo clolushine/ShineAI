@@ -1,5 +1,6 @@
 package com.shine.ai;
 
+import com.google.gson.JsonObject;
 import com.shine.ai.ui.MainPanel;
 import com.shine.ai.ui.MessageComponent;
 
@@ -15,9 +16,9 @@ public abstract class AbstractHandler {
 
     protected X509TrustManager trustManager;
 
-    public abstract  <T> T handle(MainPanel mainPanel, MessageComponent component, String question);
+    public abstract  <T> T handle(MainPanel mainPanel, MessageComponent component, JsonObject messageMy);
 
-    public abstract  <T> T handleStream(MainPanel mainPanel, MessageComponent component, String question);
+    public abstract  <T> T handleStream(MainPanel mainPanel, MessageComponent component, JsonObject messageMy);
 
     public HostnameVerifier getHostNameVerifier() {
         return (hostname, session) -> true;

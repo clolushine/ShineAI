@@ -1,9 +1,12 @@
 package com.shine.ai.ui;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.intellij.icons.AllIcons;
-import com.intellij.ide.ui.laf.darcula.ui.DarculaButtonUI;
+import com.intellij.notification.Notification;
+import com.intellij.notification.NotificationType;
+import com.intellij.notification.Notifications;
 import com.intellij.openapi.options.ShowSettingsUtil;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.NullableComponent;
@@ -15,11 +18,12 @@ import com.intellij.ui.components.JBPanel;
 import com.intellij.ui.components.panels.VerticalLayout;
 import com.intellij.util.ui.JBUI;
 import com.intellij.util.ui.UIUtil;
+import com.intellij.util.ui.WrapLayout;
 import com.shine.ai.icons.AIAssistantIcons;
 import com.shine.ai.message.MsgEntryBundle;
 import com.shine.ai.settings.*;
 import com.shine.ai.ui.listener.SendListener;
-import com.shine.ai.util.StringUtil;
+import com.shine.ai.util.*;
 import okhttp3.Call;
 import okhttp3.sse.EventSource;
 import org.jetbrains.annotations.NotNull;
@@ -30,6 +34,7 @@ import java.awt.*;
 import java.awt.event.*;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
@@ -56,7 +61,9 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
     private ExecutorService executorService;
     private Object requestHolder;
     private final JPanel actionPanel;
-    private final JPanel actionSouthPanel;
+    private final RoundPanel actionSouthPanel;
+    private final JPanel actionSouthPanelActions;
+    private final JPanel uploadListPanel;
 
     private final AIAssistantSettingsState stateStore = AIAssistantSettingsState.getInstance();
 
@@ -68,6 +75,12 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
     private JsonObject AISetOutputInfo = new JsonObject();
     private JsonObject chatCollection = new JsonObject();
     private List<JsonObject> chatList = new ArrayList<>();
+
+    // 分页渲染相关参数
+    private List<JsonObject> currentChatList = new ArrayList<>();; // 当前显示的数据
+    private int currentIndex = 0; // 当前数据在总数据中的起始索引
+    private final int PAGE_SIZE = 20; // 每页加载的数据量
+    private final int MAX_SIZE = 40; // 最大显示数据量
 
     private final Project ThisProject;
     private final MainPanel ThisMainPanel;
@@ -94,15 +107,18 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
         myList.setBorder(JBUI.Borders.empty(0,10));
 
         actionPanel = new JPanel(new BorderLayout());
+        actionPanel.setBorder(JBUI.Borders.empty(2,8,10,8));
 
         button = new JButton(MsgEntryBundle.message("ui.toolwindow.send"), IconLoader.getIcon("/icons/send.svg",MainPanel.class));
+        button.setOpaque(false);
         button.setToolTipText("Ctrl + Enter");
         button.addActionListener(listener);
-        button.setUI(new DarculaButtonUI());
 
-        BubbleButton settingButton = getSettingButton(settingPanel);
+        IconButton settingButton = getSettingButton(settingPanel);
+        IconButton imageButton = getImageButton();
 
         stopGenerating = new JButton("Stop", AllIcons.Actions.Suspend);
+        stopGenerating.setOpaque(false);
         stopGenerating.addActionListener(e -> {
             executorService.shutdownNow();
             aroundRequest(false);
@@ -112,21 +128,50 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
                 ((Call) requestHolder).cancel();
             }
         });
-        stopGenerating.setUI(new DarculaButtonUI());
 
         inputTextArea = new MultilineInput(ThisMainPanel);
+        inputTextArea.setBorder(JBUI.Borders.emptyBottom(6));
+        new InputPlaceholder("Shift + Enter to line-warp, Ctrl + Enter to submit.", inputTextArea.getTextarea());  // 添加 placeholder
         inputTextArea.setMinimumSize(new Dimension(inputTextArea.getWidth(), inputTextArea.getPreferredSize().height));
         inputTextArea.getTextarea().setLineWrap(stateStore.enableLineWarp);
         inputTextArea.getTextarea().setWrapStyleWord(stateStore.enableLineWarp);
         inputTextArea.getTextarea().setFont(new Font("Microsoft YaHei", Font.PLAIN,stateStore.CHAT_PANEL_FONT_SIZE));
 
-        actionSouthPanel = new JPanel();
-        actionSouthPanel.setLayout(new BoxLayout(actionSouthPanel, BoxLayout.X_AXIS));
-        actionSouthPanel.setBorder(JBUI.Borders.empty(4));
-        actionSouthPanel.setMaximumSize(new Dimension(getSize().width,actionSouthPanel.getPreferredSize().height));
-        actionSouthPanel.add(settingButton, BorderLayout.WEST);
-        actionSouthPanel.add(inputTextArea, BorderLayout.CENTER);
-        actionSouthPanel.add(button, BorderLayout.EAST);
+        inputTextArea.getTextarea().addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_V && (e.getModifiersEx() & KeyEvent.CTRL_DOWN_MASK) != 0) {
+                    pasteImageUpload();
+                }
+            }
+        });
+
+
+        actionSouthPanel = new RoundPanel(new BorderLayout());
+        actionSouthPanel.setOpaque(false);
+        actionSouthPanel.setBorder(JBUI.Borders.empty(12,8,4,8));
+
+        SwingUtilities.invokeLater(()-> {
+            actionSouthPanel.setBackground(UIUtil.getTextFieldBackground());
+        });
+
+        uploadListPanel = new JPanel(new WrapLayout(FlowLayout.LEFT));
+        uploadListPanel.setOpaque(false);
+
+        actionSouthPanelActions = new JPanel(new BorderLayout());
+        actionSouthPanelActions.setOpaque(false);
+
+        JPanel actionsLeft = new JPanel();
+        actionsLeft.setOpaque(false);
+        actionsLeft.setLayout(new BoxLayout(actionsLeft, BoxLayout.X_AXIS));
+        actionsLeft.add(settingButton);
+        actionsLeft.add(imageButton);
+        actionSouthPanelActions.add(actionsLeft, BorderLayout.WEST);
+        actionSouthPanelActions.add(button, BorderLayout.EAST);
+        actionSouthPanel.add(actionSouthPanelActions,BorderLayout.SOUTH);
+        actionSouthPanel.add(uploadListPanel, BorderLayout.CENTER);
+        actionSouthPanel.add(inputTextArea, BorderLayout.NORTH);
+
 
         JPanel actionNorthPanel = new JPanel(new BorderLayout());
         listCountsLabel = new JLabel();
@@ -170,6 +215,13 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
             else {
                 myScrollValue = value;
             }
+//            if (value == minValue) {
+//                // 向上滚动到顶部
+//                loadPreviousData();
+//            } else if (value + visibleAmount == maxValue) {
+//                // 向下滚动到底部
+//                loadNextData();
+//            }
         });
 
         myScrollViewport.addChangeListener(e -> {
@@ -359,7 +411,7 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
         myList.removeAll();
     }
 
-    public void openChatList() {
+    public void updateChatList() {
         for (JsonObject chatItem : chatList) {
             int promptIdx = IntStream.range(0, AIPrompts.size())
                     .filter(i -> StringUtil.equals(stateStore.getJsonObject(AIPrompts.get(i)).get("promptId").getAsString(), chatItem.get("chatId").getAsString()))
@@ -371,6 +423,7 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
             MessageComponent messageComponentItem = new MessageComponent(ThisProject,chatItem,this);
             myList.add(messageComponentItem);
         }
+
         updateLayout();
         scrollToBottom();
         updateUI();
@@ -386,8 +439,39 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
         }
         chatList = chatCollection.get("chatList").getAsJsonArray().asList().stream()
                 .map(JsonElement::getAsJsonObject)
-                .collect(Collectors.toList());;
-        openChatList();
+                .collect(Collectors.toList());
+
+        updateChatList();
+    }
+
+    private void loadInitialChatlist() {
+        currentChatList.addAll(chatList.subList(Math.max(chatList.size() - PAGE_SIZE, 0), chatList.size()));
+    }
+
+    private void loadPreviousData() {
+        if (currentIndex == 0) return;
+        int newIndex = Math.max(0, currentIndex - PAGE_SIZE);
+        int loadSize = Math.min(PAGE_SIZE, currentIndex - newIndex);
+        List<JsonObject> newData = chatList.subList(newIndex, newIndex + loadSize);
+        currentChatList.addAll(0, newData);
+        if (currentChatList.size() > MAX_SIZE) {
+            currentChatList.subList(MAX_SIZE, currentChatList.size()).clear(); // 删除尾部
+        }
+        currentIndex = newIndex;
+        updateChatList();
+    }
+
+    private void loadNextData() {
+        if (currentIndex + currentChatList.size() >= chatList.size()) return;
+        int newIndex = Math.min(chatList.size() - 1, currentIndex + PAGE_SIZE);
+        int loadSize = Math.min(PAGE_SIZE, chatList.size() - newIndex);
+        List<JsonObject> newData = chatList.subList(newIndex, newIndex + loadSize);
+        currentChatList.addAll(newData);
+        if (currentChatList.size() > MAX_SIZE) {
+            currentChatList.subList(0, currentChatList.size() - MAX_SIZE).clear(); // 删除头部
+        }
+        currentIndex = newIndex - (Math.max(currentChatList.size() - MAX_SIZE, 0));
+        updateChatList();
     }
 
     public void initAIInfoPanel() {
@@ -444,6 +528,7 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
         AIInfo.addProperty("isPin",false);
         AIInfo.addProperty("showBtn",false);
         AIInfo.addProperty("withContent",""); // 内容相关, 例如违法条例等
+        AIInfo.add("attachments",new JsonArray()); // 附件相关, 例如图片文件等
 
         if (AIVendorSet.equals(CFAISettingPanel.class)) {
             AIInfo.addProperty("name", MsgEntryBundle.message("ui.setting.server.cloudflare.name"));
@@ -468,6 +553,8 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
         MyInfo.addProperty("isPin",false);
         MyInfo.addProperty("showBtn",false);
         MyInfo.addProperty("withContent",""); // 内容相关, 例如违法条例等
+
+        MyInfo.add("attachments",new JsonArray()); // 附件相关, 例如图片文件等
     }
 
     public void initAISetInfo() {
@@ -544,9 +631,8 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
         }
     }
 
-    private @NotNull BubbleButton getSettingButton(Class<?> settingPanel) {
-        BubbleButton settingButton = new BubbleButton("", AllIcons.Actions.Properties);
-        settingButton.setToolTipText("setting");
+    private @NotNull IconButton getSettingButton(Class<?> settingPanel) {
+        IconButton settingButton = new IconButton("setting", IconLoader.getIcon("/icons/setting.svg",MainPanel.class));
         settingButton.addActionListener(e -> {
             if (settingPanel.equals(CFAISettingPanel.class)) {
                 ShowSettingsUtil.getInstance().showSettingsDialog(ThisProject, CFAISettingPanel.class);
@@ -557,6 +643,107 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
             }
         });
         return settingButton;
+    }
+
+    private @NotNull IconButton getImageButton() {
+        IconButton imageButton = new IconButton("choose image", IconLoader.getIcon("/icons/image.svg",MainPanel.class));
+        imageButton.addActionListener(e -> handleImageUpload());
+        return imageButton;
+    }
+
+    private void handleImageUpload() {
+        if (!checkImagesLen()) return;
+        Image img = ImgUtils.chooseImage(ThisProject);
+        if (img != null) {
+            addImage(img);
+        }
+    }
+
+    private void pasteImageUpload() {
+        if (!checkImagesLen()) return;
+        Image img = inputTextArea.pasteFromClipboardImage();
+        if (img != null) {
+            addImage(img);
+        }
+    }
+
+    private void addImage(Image img) {
+        if (img != null) {
+            ImageView imagePanel = new ImageView(img);
+            doUploadImage(img,imagePanel);
+
+            imagePanel.getDeleteButton().addActionListener(e -> {
+                removeImage(imagePanel);
+            });
+
+            imagePanel.getReUploadButton().addActionListener(e -> {
+                doUploadImage(img,imagePanel);
+            });
+
+            uploadListPanel.add(imagePanel);
+            uploadListPanel.updateUI();
+        }
+    }
+
+    private void doUploadImage(Image img,ImageView imagePanel) {
+        new SwingWorker<>() {
+            @Override
+            protected JsonObject doInBackground() {
+                imagePanel.setLoading(true);
+                return ShineAIUtil.uploadImg(img,imagePanel);
+            }
+            @Override
+            protected void done() {
+                try {
+                    JsonObject resData = (JsonObject) get(); // 获取 doInBackground() 的结果，如果发生异常，会在这里抛出
+                    String fileName = resData.get("fileName").getAsString();
+                    String url = resData.has("url") ? resData.get("url").getAsString() : null;
+                    imagePanel.setImage(url,fileName);
+                    imagePanel.setLoading(false);
+                } catch (InterruptedException | ExecutionException e) {
+                    imagePanel.setImage(null,null);
+                    imagePanel.setLoading(false);
+                    System.out.println("doUploadImage error：" + e.getMessage());
+                }
+            }
+        }.execute();
+    }
+
+    private Boolean checkImagesLen() {
+        if (uploadListPanel.getComponentCount() > 9) {
+            Notifications.Bus.notify(new Notification(MsgEntryBundle.message("group.id"),"Add error","Cannot add more images.",NotificationType.ERROR));
+            return false;
+        }
+        return true;
+    }
+
+    private void removeImage(JComponent imageItem) {
+        if (imageItem != null) {
+            uploadListPanel.remove(imageItem);
+            uploadListPanel.updateUI();
+        }
+    }
+
+    public JsonArray getUploadList() {
+        JsonArray upLoadList = new JsonArray();
+        for (int i = 0; i < uploadListPanel.getComponentCount(); i++) {
+            Component component = uploadListPanel.getComponent(i);
+            if (component instanceof ImageView ImageComponent) {
+                if (ImageComponent.isUploaded && ImageComponent.getImage() != null) {
+                    JsonObject attachmentItem = new JsonObject();
+                    attachmentItem.addProperty("fileName",ImageComponent.getName());
+                    attachmentItem.addProperty("type","image");
+                    attachmentItem.addProperty("mimeType","image/jpg"); // 强制jpg
+                    attachmentItem.addProperty("url",ImageComponent.getUrl());
+                    upLoadList.add(attachmentItem);
+                }
+            }
+        }
+        return upLoadList;
+    }
+
+    public void removeUploadList() {
+        uploadListPanel.removeAll();
     }
 
     public void setRequestHolder(Object eventSource) {
@@ -573,20 +760,21 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
         progressBar.setVisible(status);
         button.setEnabled(!status);
         if (status) {
-//            this.addScrollListener();
             setItemsDisabledRerunAndTrash(true);
             disabledCollectionAction(true);
             chatSettingButton.setEnabled(false);
-            actionSouthPanel.remove(button);
-            actionSouthPanel.add(stopGenerating,BorderLayout.EAST);
+            actionSouthPanelActions.remove(button);
+            actionSouthPanelActions.add(stopGenerating,BorderLayout.EAST);
         } else {
-//            this.removeScrollListener();
-            getExecutorService().shutdown();
+            ExecutorService service = getExecutorService();
+            if (service != null) {
+                service.shutdown();
+            }
             setItemsDisabled(false);
             disabledCollectionAction(false);
             chatSettingButton.setEnabled(true);
-            actionSouthPanel.remove(stopGenerating);
-            actionSouthPanel.add(button,BorderLayout.EAST);
+            actionSouthPanelActions.remove(stopGenerating);
+            actionSouthPanelActions.add(button,BorderLayout.EAST);
         }
         actionPanel.updateUI();
     }

@@ -1,5 +1,6 @@
 package com.shine.ai.ui;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.intellij.openapi.project.Project;
 import com.intellij.ui.JBColor;
@@ -10,7 +11,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
-import javax.swing.text.html.StyleSheet;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -63,6 +63,13 @@ public class PromptComponent extends JBPanel<PromptComponent> {
         String name = chatItemData.get("name").getAsString();
         String withContent = chatItemData.get("withContent").getAsString();
 
+        JsonArray attachments = null;
+//        if (chatItemData.has("attachments") && !chatItemData.get("attachments").isJsonNull()) {
+//            attachments = chatItemData.get("attachments").getAsJsonArray();
+//        }else {
+//            attachments = new JsonArray();
+//        }
+
         JPanel northPanel = new JPanel(new BorderLayout());
         northPanel.setOpaque(false);
         northPanel.setBorder(JBUI.Borders.empty());
@@ -98,9 +105,9 @@ public class PromptComponent extends JBPanel<PromptComponent> {
         messagePanel.setLayout(new BoxLayout(messagePanel, BoxLayout.Y_AXIS));
         messagePanel.setOpaque(true);
         messagePanel.setMinimumSize(new Dimension(getMinimumSize().width,32));
-        messagePanel.setBorder(JBUI.Borders.empty(isMe ? 6 : 0));
+        messagePanel.setBorder(JBUI.Borders.empty(2));
 
-        JComponent messageTextarea = MessageTextareaComponent(content,isMe);
+        JComponent messageTextarea = MessageTextareaComponent(content,isMe,attachments);
         messagePanel.add(messageTextarea,BorderLayout.CENTER);
 
         centerPanel.add(messagePanel, BorderLayout.CENTER);
@@ -122,19 +129,19 @@ public class PromptComponent extends JBPanel<PromptComponent> {
         add(southPanel,BorderLayout.SOUTH); // 将 MainPanel 添加到中心
     }
 
-    public MyScrollPane MessageTextareaComponent (String content,Boolean isMe) {
-        MessageTextareaComponent textarea = new MessageTextareaComponent(content);
-
-        StyleSheet styleSheet = textarea.getTextPaneKit().getStyleSheet();
-        styleSheet.addRule(String.format(".content{ padding: 6px 10px; color: #000000; background: %s; border-radius: 12px;}",isMe ? "#b4d6ff" : "#ffffff"));
-        textarea.updateUI();
-
-        MyScrollPane scrollPane = new MyScrollPane(textarea,ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER,ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-
-        SwingUtilities.invokeLater(()-> {
-            scrollPane.getHorizontalScrollBar().setValue(0);
-        });
-
-        return scrollPane;
+    public RoundPanel MessageTextareaComponent (String content, Boolean isMe, JsonArray attachments) {
+        RoundPanel messagePanel = new RoundPanel();
+        messagePanel.setLayout(new BoxLayout(messagePanel,BoxLayout.Y_AXIS));
+        messagePanel.add(new MessageTextareaComponent(content,isMe ? Color.decode("#b4d6ff") : Color.decode("#ffffff")));
+//        for (int i = 0; i < attachments.size(); i++) {
+//            JsonObject item = attachments.get(i).getAsJsonObject();
+//            if (item.has("type") && StringUtil.equals(item.get("type").getAsString(),"image")) {
+//                ImageViewInMessage imageView = new ImageViewInMessage(null,item.get("fileName").getAsString(),256);
+//                messagePanel.add(Box.createRigidArea(new Dimension(0, 8))); // 上间距
+//                messagePanel.add(imageView);
+//                if (i != attachments.size() - 1) messagePanel.add(Box.createRigidArea(new Dimension(0, 8))); // 下间距
+//            }
+//        }
+        return messagePanel;
     }
 }

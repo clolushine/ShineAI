@@ -37,11 +37,11 @@ public class TextPaneComponent extends JTextPane {
     private final List<Element> codeElementList = new ArrayList<>();
 
     public TextPaneComponent() {
-        setContentType("text/html; charset=UTF-8");
-        setFont(new Font("Microsoft YaHei", Font.PLAIN,stateStore.CHAT_PANEL_FONT_SIZE));
         setEditable(false);
         setOpaque(false);
         setBorder(null);
+        setContentType("text/html; charset=UTF-8");
+        setFont(new Font("Microsoft YaHei", Font.PLAIN,stateStore.CHAT_PANEL_FONT_SIZE));
         addHyperlinkListener(e -> {
             if (e.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
                 String href = e.getDescription();
