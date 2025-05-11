@@ -15,5 +15,9 @@
 重启 IntelliJ IDEA: IntelliJ IDEA 会提示你重启 IDE 以使插件生效。 点击 "Restart IDE" 重启 IDE。
 
 
-## Unishine for h5/web
-- h5版： [https://github.com/cloudshinezhong/unishine](https://github.com/cloudshinezhong/unishine)
+## Unishine for h5 
+- h5版预览地址： [https://unishine.pages.dev/#/pages/index/index](https://unishine.pages.dev/#/pages/index/index)
+
+
+# 公告
+该项目已经过时，本人精力有限不再维护更新。
