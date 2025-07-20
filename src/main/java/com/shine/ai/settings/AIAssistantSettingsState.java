@@ -35,7 +35,7 @@ import static com.shine.ai.MyToolWindowFactory.*;
 )
 public class AIAssistantSettingsState implements PersistentStateComponent<AIAssistantSettingsState> {
   // 最大存储空间大小 (MB) -  根据你的需求设置
-  public static final double MAX_STORAGE_SIZE_MB = 10;
+  public static final double MAX_STORAGE_SIZE_MB = 100;
 
   public static final String[] promptsComboboxRolesString = {"user", "system", "assistant"};
 
