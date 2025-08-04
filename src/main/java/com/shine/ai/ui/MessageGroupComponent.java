@@ -3,23 +3,30 @@ package com.shine.ai.ui;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import com.intellij.icons.AllIcons;
-import com.intellij.notification.Notification;
-import com.intellij.notification.NotificationType;
-import com.intellij.notification.Notifications;
+import com.intellij.ide.ui.LafManager;
+import com.intellij.ide.ui.LafManagerListener;
+import com.intellij.openapi.Disposable;
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.options.ShowSettingsUtil;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.MessageType;
 import com.intellij.openapi.ui.NullableComponent;
 import com.intellij.openapi.util.IconLoader;
 import com.intellij.ui.Gray;
 import com.intellij.ui.JBColor;
-import com.intellij.ui.components.JBLabel;
 import com.intellij.ui.components.JBPanel;
 import com.intellij.ui.components.panels.VerticalLayout;
+import com.intellij.util.messages.MessageBusConnection;
 import com.intellij.util.ui.JBUI;
 import com.intellij.util.ui.UIUtil;
 import com.intellij.util.ui.WrapLayout;
-import com.shine.ai.icons.AIAssistantIcons;
+import com.shine.ai.db.DBUtil;
+import com.shine.ai.db.chats.Chats;
+import com.shine.ai.db.chats.ChatsManager;
+import com.shine.ai.db.colls.Colls;
+import com.shine.ai.db.colls.CollsManager;
 import com.shine.ai.message.MsgEntryBundle;
 import com.shine.ai.settings.*;
 import com.shine.ai.ui.listener.SendListener;
@@ -27,11 +34,14 @@ import com.shine.ai.util.*;
 import okhttp3.Call;
 import okhttp3.sse.EventSource;
 import org.jetbrains.annotations.NotNull;
+import cn.hutool.core.swing.clipboard.ClipboardUtil;
 
 import javax.swing.*;
 import javax.swing.border.Border;
+import javax.swing.plaf.basic.BasicTextAreaUI;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.image.BufferedImage;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -40,19 +50,29 @@ import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static com.shine.ai.MyToolWindowFactory.disabledCollectionAction;
+import static com.shine.ai.MyToolWindowFactory.*;
 
-public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implements NullableComponent {
-    private final JPanel infoTopPanel = new JPanel(new BorderLayout());
+public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implements NullableComponent, Disposable, MessageComponent.UpdateActionCallback {
+    private final AIAssistantSettingsState stateStore = AIAssistantSettingsState.getInstance();
+
+    public final JPanel infoTopPanel = new JPanel(new BorderLayout());
     private final JPanel infoPanel = new JPanel(new BorderLayout());
     private final JPanel myList = new JPanel(new VerticalLayout(JBUI.scale(10)));
-    private final MyScrollPane myScrollPane = new MyScrollPane(myList, ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
-                                      ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-    private int myScrollValue = 0;
+    private final MyScrollPane myScrollPane = new MyScrollPane(myList, ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);;
+    //
+    private volatile boolean shouldScrollToBottom = false;
 
     private final JLabel listCountsLabel;
 
     private IconButton chatSettingButton;
+
+    private IconButton chatMatchButton;
+
+    // 初始化查询窗
+    public final FindMatchDialog findMatchDialog = new FindMatchDialog();
+
+    private final IconButton uploadImgButton;
+    private final IconButton webSearchButton;
 
     public final MultilineInput inputTextArea;
     public final JButton button;
@@ -65,22 +85,23 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
     private final JPanel actionSouthPanelActions;
     private final JPanel uploadListPanel;
 
-    private final AIAssistantSettingsState stateStore = AIAssistantSettingsState.getInstance();
+    // chats db
+    private final ChatsManager chatsManager = ChatsManager.getInstance();
 
-    private final MyAdjustmentListener scrollListener = new MyAdjustmentListener();
-    public final JsonObject AIInfo = new JsonObject();
-    public final JsonObject MyInfo = new JsonObject();
-    public List<String> AIPrompts = new ArrayList<>();
+    // colls db
+    private final CollsManager collsManager = CollsManager.getInstance();
+
+
+    public JsonObject AIInfo = new JsonObject();
+    public JsonObject MyInfo = new JsonObject();
+    public List<JsonObject> AIPrompts = new ArrayList<>();
     private final JsonObject AISetInfo = new JsonObject();
     private JsonObject AISetOutputInfo = new JsonObject();
-    private JsonObject chatCollection = new JsonObject();
+    // 新增
+    private JsonObject collsIt = new JsonObject();
     private List<JsonObject> chatList = new ArrayList<>();
 
-    // 分页渲染相关参数
-    private List<JsonObject> currentChatList = new ArrayList<>();; // 当前显示的数据
-    private int currentIndex = 0; // 当前数据在总数据中的起始索引
-    private final int PAGE_SIZE = 20; // 每页加载的数据量
-    private final int MAX_SIZE = 40; // 最大显示数据量
+    private final int visibleBufferSize = 5;
 
     private final Project ThisProject;
     private final MainPanel ThisMainPanel;
@@ -115,7 +136,10 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
         button.addActionListener(listener);
 
         IconButton settingButton = getSettingButton(settingPanel);
-        IconButton imageButton = getImageButton();
+        uploadImgButton = getImageButton();
+        uploadImgButton.setVisible(false); // 这里先隐藏，设置AI info函数一起设置
+        webSearchButton = getWebSearchButton();
+        webSearchButton.setVisible(false); // 这里先隐藏，设置AI info函数一起设置
 
         stopGenerating = new JButton("Stop", AllIcons.Actions.Suspend);
         stopGenerating.setOpaque(false);
@@ -130,13 +154,12 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
         });
 
         inputTextArea = new MultilineInput(ThisMainPanel);
-        inputTextArea.setBorder(JBUI.Borders.emptyBottom(6));
-        new InputPlaceholder("Shift + Enter to line-warp, Ctrl + Enter to submit.", inputTextArea.getTextarea());  // 添加 placeholder
+        inputTextArea.setBorder(JBUI.Borders.emptyBottom(4));
+//        new InputPlaceholder("Shift + Enter to line-warp, Ctrl + Enter to submit.", inputTextArea.getTextarea());  // 添加 placeholder
         inputTextArea.setMinimumSize(new Dimension(inputTextArea.getWidth(), inputTextArea.getPreferredSize().height));
         inputTextArea.getTextarea().setLineWrap(stateStore.enableLineWarp);
         inputTextArea.getTextarea().setWrapStyleWord(stateStore.enableLineWarp);
         inputTextArea.getTextarea().setFont(new Font("Microsoft YaHei", Font.PLAIN,stateStore.CHAT_PANEL_FONT_SIZE));
-
         inputTextArea.getTextarea().addKeyListener(new KeyAdapter() {
             @Override
             public void keyReleased(KeyEvent e) {
@@ -145,14 +168,23 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
                 }
             }
         });
-
+        updateInputTextAreaUI();
 
         actionSouthPanel = new RoundPanel(new BorderLayout());
         actionSouthPanel.setOpaque(false);
+        actionSouthPanel.setArc(12,12);
         actionSouthPanel.setBorder(JBUI.Borders.empty(12,8,4,8));
 
-        SwingUtilities.invokeLater(()-> {
-            actionSouthPanel.setBackground(UIUtil.getTextFieldBackground());
+        // 获取 Application-level 的 MessageBus 连接，并与当前 Disposable 绑定
+        MessageBusConnection messageBusConnection = ApplicationManager.getApplication().getMessageBus().connect(this);
+
+        // 订阅 LafManagerListener.TOPIC
+        messageBusConnection.subscribe(LafManagerListener.TOPIC, new LafManagerListener() {
+            @Override
+            public void lookAndFeelChanged(@NotNull LafManager source) {
+                updateActionSouthPanelBg(); // 主题变化时更新背景
+                updateInputTextAreaUI(); // 更新输入框ui
+            }
         });
 
         uploadListPanel = new JPanel(new WrapLayout(FlowLayout.LEFT));
@@ -165,7 +197,8 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
         actionsLeft.setOpaque(false);
         actionsLeft.setLayout(new BoxLayout(actionsLeft, BoxLayout.X_AXIS));
         actionsLeft.add(settingButton);
-        actionsLeft.add(imageButton);
+        actionsLeft.add(uploadImgButton);
+        actionsLeft.add(webSearchButton);
         actionSouthPanelActions.add(actionsLeft, BorderLayout.WEST);
         actionSouthPanelActions.add(button, BorderLayout.EAST);
         actionSouthPanel.add(actionSouthPanelActions,BorderLayout.SOUTH);
@@ -177,7 +210,7 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
         listCountsLabel = new JLabel();
         listCountsLabel.setBorder(JBUI.Borders.empty(2,0));
         listCountsLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        listCountsLabel.setForeground(JBColor.namedColor("Label.infoForeground", new JBColor(Gray.x80, Gray.x8C)));
+        listCountsLabel.setForeground(new JBColor(Gray.x80, Gray.x8C));
         listCountsLabel.setFont(JBUI.Fonts.create(null,11));
         actionNorthPanel.add(listCountsLabel,BorderLayout.NORTH);
 
@@ -199,52 +232,11 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
 
         initAIInfoPanel(); // 这里写出方法好修改渲染数据
 
+        initAIFunctionIcon(); // 设置底部AI功能图标
+
         mainPanel.add(infoTopPanel, BorderLayout.NORTH);
 
-        myScrollPane.setBorder(JBUI.Borders.empty());
-        JViewport myScrollViewport = myScrollPane.getViewport();
         mainPanel.add(myScrollPane,BorderLayout.CENTER);
-
-        myScrollPane.getVerticalScrollBar().setAutoscrolls(true);
-        myScrollPane.getVerticalScrollBar().addAdjustmentListener(e -> {
-            int value = e.getValue();
-            if (myScrollValue == 0 && value > 0 || myScrollValue > 0 && value == 0) {
-                myScrollValue = value;
-                repaint();
-            }
-            else {
-                myScrollValue = value;
-            }
-//            if (value == minValue) {
-//                // 向上滚动到顶部
-//                loadPreviousData();
-//            } else if (value + visibleAmount == maxValue) {
-//                // 向下滚动到底部
-//                loadNextData();
-//            }
-        });
-
-        myScrollViewport.addChangeListener(e -> {
-            Rectangle visibleRect = myScrollViewport.getViewRect();
-            // 创建扩展后的可见区域
-            Rectangle extendedVisibleRect = new Rectangle(
-                    visibleRect.x,
-                    visibleRect.y + 32,
-                    visibleRect.width,
-                    visibleRect.height - 64
-            );
-            for (int i = 0; i < myList.getComponentCount(); i++) {
-                Component component = myList.getComponent(i);
-                if (component instanceof MessageComponent messageComponent) {
-                    Rectangle panelBounds = messageComponent.getBounds();
-                    Rectangle actionsPanel = new Rectangle(panelBounds.x,panelBounds.y,panelBounds.width,32);
-                    // 检查组件是否在显示区域内
-                    boolean isVisible = extendedVisibleRect.intersects(actionsPanel);
-                    CardLayout cl = (CardLayout)(messageComponent.actionPanel.getLayout());
-                    cl.show(messageComponent.actionPanel, isVisible ? "messageActions":"placeholder");
-                }
-            }
-        });
 
         myList.addContainerListener(new ContainerListener() {
             @Override
@@ -257,6 +249,56 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
                 refreshListCounts();
             }
         });
+
+        // 为 myList 添加尺寸变化监听器
+        myList.addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override
+            public void componentResized(java.awt.event.ComponentEvent e) {
+                // 只有在我们主动请求滚动时，才执行操作
+                if (shouldScrollToBottom) {
+                    // 此时 myList 的尺寸已经更新，我们现在可以安全地滚动了
+                    scrollToBottom();
+                    // **非常重要**: 任务完成后，立刻将标志位复位！
+                    // 这样可以防止用户后续拖动窗口大小时意外触发滚动。
+                    shouldScrollToBottom = false;
+                }
+            }
+        });
+
+        // 设置底部栏的背景
+        updateActionSouthPanelBg();
+
+//        JViewport myScrollViewport = myScrollPane.getViewport();
+//        myScrollViewport.addChangeListener(e -> {
+//            Rectangle visibleRect = myScrollViewport.getViewRect();
+//            // 创建扩展后的可见区域
+//            Rectangle extendedVisibleRect = new Rectangle(
+//                    visibleRect.x,
+//                    visibleRect.y,
+//                    visibleRect.width,
+//                    visibleRect.height
+//            );
+//            int totalSize = myList.getComponentCount();
+//            List<Integer> visibleIndexList = new ArrayList<>();
+//            for (int i = 0; i < totalSize; i++) {
+//                MessageComponent component = (MessageComponent) myList.getComponent(i);
+//                Rectangle panelBounds = component.getBounds();
+//                // 检查组件是否在显示区域内
+//                boolean currentIsVisible = extendedVisibleRect.intersects(panelBounds);
+//                if (currentIsVisible) {
+//                    // 添加当前index及上下bufferSize个元素
+//                    int start = Math.max(0, i - visibleBufferSize);
+//                    int end = Math.min(totalSize - 1, i + visibleBufferSize);
+//                    for (int j = start; j <= end; j++) {
+//                        if (!visibleIndexList.contains(j)) {
+//                            visibleIndexList.add(j);
+//                        }
+//                    }
+//                }
+//                CardLayout cl = (CardLayout)(component.messageCyPanel.getLayout());
+//                cl.show(component.messageCyPanel,visibleIndexList.contains(i) ? "messagePanel" : "messagePanelPlaceholder");
+//            }
+//        });
     }
 
     public void init() {
@@ -271,7 +313,7 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
         for (int i = 0; i < myList.getComponentCount(); i++) { // 从后往前循环
             Component component = myList.getComponent(i);
             if (component instanceof MessageComponent messageComponent) {
-                messageComponent.messageActions.setDisabledRerunAndTrash(disabled);
+                messageComponent.messageActions.setDisabledRerun(disabled);
             }
         }
     }
@@ -285,24 +327,59 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
         }
     }
 
+    public void clearAllHighLights() {
+        for (int i = 0; i < myList.getComponentCount(); i++) { // 从后往前循环
+            Component component = myList.getComponent(i);
+            if (component instanceof MessageComponent messageComponent) {
+                messageComponent.clearHighlighter();
+            }
+        }
+    }
+
+    public void highlightsAll(List<JsonObject> matchList, int selectedGlobalMatchIndex) {
+        for (int i = 0; i < myList.getComponentCount(); i++) {
+            Component component = myList.getComponent(i);
+            if (component instanceof MessageComponent messageComponent) {
+                List<JsonObject> matches = getMatchesForComponent(messageComponent, matchList);
+                messageComponent.setHighlightsAll(matches, selectedGlobalMatchIndex);
+            }
+        }
+    }
+
+    private List<JsonObject> getMatchesForComponent(MessageComponent mc,List<JsonObject> matchList) {
+        String id = mc.chatId; // 或者你实际获取 id 的方式
+        return matchList.stream()
+                .filter(j -> StringUtil.equals(j.get("id").getAsString(),id))
+                .collect(Collectors.toList());
+    }
+
     public MessageComponent add(JsonObject message) {
         chatList.add(message);
-        chatCollection.add("chatList",stateStore.getJsonArray(chatList));
-        stateStore.updateChatCollectionInfo(chatCollection);
-        MessageComponent messageComponentItem = new MessageComponent(ThisProject,message,this);
+
+        // 写入到db
+        chatsManager.addChats(new Chats(message));
+        DBUtil.addAttachsBatch(message.get("attachments").getAsJsonArray());
+        DBUtil.updateCollsById(collsIt.get("id").getAsString());
+
+        MessageComponent messageComponentItem = new MessageComponent(ThisProject,message);
+        messageComponentItem.setActionCallback(this); // 设置回调对象引用
+
         myList.add(messageComponentItem);
-        updateLayout();
-        scrollToBottom();
-        updateUI();
+
+        scrollToBottomAfterLayout();
+
         return messageComponentItem;
     }
 
     public void updateMessageState(String chatId,JsonObject newData) {
         for (JsonObject chatItem : chatList) {
-            if (StringUtil.equals(chatItem.get("chatId").getAsString(), chatId)) {
-                chatItem = stateStore.mergeJsonObject(chatItem,newData);
-                chatCollection.add("chatList",stateStore.getJsonArray(chatList));
-                stateStore.updateChatCollectionInfo(chatCollection);
+            if (StringUtil.equals(chatItem.get("id").getAsString(), chatId)) {
+                chatItem = JsonUtil.mergeJsonObject(chatItem,newData);
+
+                // 写入到db
+                chatsManager.addChats(new Chats(chatItem));
+                DBUtil.updateCollsById(collsIt.get("id").getAsString());
+
                 break; // 找到后立即退出循环
             }
         }
@@ -325,34 +402,48 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
         return comp;
     }
 
-    public void modifyListItemInfo(JsonObject chatItemInfo) {
+    public MessageComponent getItemById(String chatId) {
+        MessageComponent comp = null;
+        if (chatId == null || chatId.isBlank()) {
+            return null;
+        }
         for (int i = 0; i < myList.getComponentCount(); i++) {
             Component component = myList.getComponent(i);
             if (component instanceof MessageComponent messageComponent) {
-                JsonObject imf = chatList.stream()
-                        .filter(item -> StringUtil.equals(item.get("chatId").getAsString(), chatItemInfo.get("chatId").getAsString()))
-                        .findFirst().orElse(null);
-                if (StringUtil.equals(messageComponent.chatId, chatItemInfo.get("chatId").getAsString()) && imf != null) {
-                    JsonObject updateItemInfo = stateStore.mergeJsonObject(imf,chatItemInfo);
-                    // 修改 MessageComponent 的内容
-                    messageComponent.updateContent(updateItemInfo);
-                    break; // 找到后退出循环
+                if (StringUtil.equals(messageComponent.chatId, chatId)) {
+                    comp = messageComponent;
+                    break;
                 }
             }
         }
+        return comp;
+    }
+
+    public List<JsonObject> getRenderedChatList() {
+        List<JsonObject> list = new ArrayList<>();
+        for (int i = 0; i < myList.getComponentCount(); i++) {
+            Component component = myList.getComponent(i);
+            JsonObject chatItem = new JsonObject();
+            if (component instanceof MessageComponent messageComponent) {
+                chatItem.addProperty("id", messageComponent.chatId);
+                chatItem.addProperty("content", messageComponent.getContent());
+                list.add(chatItem);
+            }
+        }
+        return list;
     }
 
     public void refreshListCounts() {
         listCountsLabel.setText("total：" + chatList.size() + " dialogs");
     }
 
-    public void addPin(JsonObject message,JComponent component) {
-        String chatId = message.get("chatId").getAsString();
+    public void addPin(JsonObject message) {
+        String chatId = message.get("id").getAsString();
         String content = message.get("content").getAsString();
         String role = message.get("role").getAsString();
 
         int setIdx = IntStream.range(0, AIPrompts.size())
-                .filter(i -> StringUtil.equals(stateStore.getJsonObject(AIPrompts.get(i)).get("promptId").getAsString(), chatId))
+                .filter(i -> StringUtil.equals(AIPrompts.get(i).get("promptId").getAsString(), chatId))
                 .findFirst()
                 .orElse(-1);
         if (setIdx >= 0) return;
@@ -362,21 +453,23 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
         prompt.addProperty("role",role);
         prompt.addProperty("content",content);
 
-        AIPrompts.add(AIPrompts.size(),stateStore.getJsonString(prompt));
+        AIPrompts.add(AIPrompts.size(),prompt);
 
         for (JsonObject element : chatList) {
-            if (StringUtil.equals(element.get("chatId").getAsString(), chatId)) {
+            if (StringUtil.equals(element.get("id").getAsString(), chatId)) {
                 element.addProperty("isPin",true);
-                MessageComponent messageComponent = (MessageComponent) component;
-                messageComponent.updateActions(element);
-                break; // 找到后立即退出循环
+                MessageComponent messageComponent = getByChatId(chatId);;
+                if (messageComponent != null) {
+                    messageComponent.updateActions(element);
+                    break; // 找到后立即退出循环
+                }
             }
         }
     }
 
-    public void deletePin(String chatId,JComponent component) {
+    public void deletePin(String chatId) {
         int delIdx = IntStream.range(0, AIPrompts.size())
-                .filter(i -> StringUtil.equals(stateStore.getJsonObject(AIPrompts.get(i)).get("promptId").getAsString(), chatId))
+                .filter(i -> StringUtil.equals(AIPrompts.get(i).get("promptId").getAsString(), chatId))
                 .findFirst()
                 .orElse(-1);
 
@@ -384,22 +477,53 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
             AIPrompts.remove(delIdx);
         }
         for (JsonObject element : chatList) {
-            if (StringUtil.equals(element.get("chatId").getAsString(), chatId)) {
+            if (StringUtil.equals(element.get("id").getAsString(), chatId)) {
                 element.addProperty("isPin",false);
-                MessageComponent messageComponent = (MessageComponent) component;
-                messageComponent.updateActions(element);
-                break; // 找到后立即退出循环
+                MessageComponent messageComponent = getByChatId(chatId);
+                if (messageComponent != null) {
+                    messageComponent.updateActions(element);
+                    break; // 找到后立即退出循环
+                }
             }
         }
     }
 
-    public void delete(String chatId,JComponent component) {
-        chatList.removeIf(it -> StringUtil.equals(it.get("chatId").getAsString(),chatId));
-        chatCollection.add("chatList",stateStore.getJsonArray(chatList));
-        stateStore.updateChatCollectionInfo(chatCollection);
-        myList.remove(component);
+    public void delete(String chatId) {
+        chatList.removeIf(it -> StringUtil.equals(it.get("id").getAsString(),chatId));
+
+        // 写入到db
+        DBUtil.delChatsById(chatId);
+        DBUtil.updateCollsById(collsIt.get("id").getAsString());
+
+        deleteByChatId(chatId);
+
         updateLayout();
-        updateUI();
+    }
+
+    public void deleteByChatId(String chatId) {
+        // 删除该子元素
+        for (int i = 0; i < myList.getComponentCount(); i++) {
+            Component component = myList.getComponent(i);
+            if (component instanceof MessageComponent messageComponent) {
+                if (StringUtil.equals(messageComponent.chatId,chatId)) {
+                    messageComponent.cleanup();
+                    myList.remove(messageComponent);
+                }
+            }
+        }
+    }
+
+    public MessageComponent getByChatId(String chatId) {
+        MessageComponent messageComponent = null;
+        for (int i = 0; i < myList.getComponentCount(); i++) {
+            Component component = myList.getComponent(i);
+            if (component instanceof MessageComponent messageCom) {
+                if (StringUtil.equals(messageCom.chatId,chatId)) {
+                    messageComponent = messageCom;
+                }
+            }
+        }
+        return messageComponent;
     }
 
     public void removeInfo() {
@@ -408,78 +532,170 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
     }
 
     public void removeList() {
+        for (int i = 0; i < myList.getComponentCount(); i++) {
+            Component component = myList.getComponent(i);
+            if (component instanceof MessageComponent messageComponent) {
+                messageComponent.cleanup();
+                myList.remove(messageComponent);
+            }
+        }
+
         myList.removeAll();
     }
 
     public void updateChatList() {
         for (JsonObject chatItem : chatList) {
             int promptIdx = IntStream.range(0, AIPrompts.size())
-                    .filter(i -> StringUtil.equals(stateStore.getJsonObject(AIPrompts.get(i)).get("promptId").getAsString(), chatItem.get("chatId").getAsString()))
+                    .filter(i -> StringUtil.equals(AIPrompts.get(i).get("promptId").getAsString(), chatItem.get("id").getAsString()))
                     .findFirst()
                     .orElse(-1);
             int status = chatItem.get("status").getAsInt();
             chatItem.addProperty("isPin", promptIdx >= 0); // 把是否提示词判断下
             chatItem.addProperty("status", (status == 0 || status == 2) ? -1 : status); // 把进行时状态改成-1
-            MessageComponent messageComponentItem = new MessageComponent(ThisProject,chatItem,this);
+
+            MessageComponent messageComponentItem = new MessageComponent(ThisProject,chatItem);
+            messageComponentItem.setActionCallback(this); // 设置回调对象引用
+
             myList.add(messageComponentItem);
         }
 
         updateLayout();
-        scrollToBottom();
-        updateUI();
+
+        scrollToBottomAfterLayout();
     }
 
     public void initChatList() {
-        if (stateStore.AIChatCollection.isEmpty()) {
-            String newChatCollection = stateStore.createChatCollection();
-            chatCollection = stateStore.getJsonObject(newChatCollection);
-            stateStore.AIChatCollection.add(0,newChatCollection);
+        // 查询db
+        Colls colls = collsManager.findLatestOne();
+
+        if (colls == null) {
+            // 写入到db
+            DBUtil.createCollsAndChats();
+            collsIt = collsManager.findLatestOne().getJsonObjectAll();
+
         }else {
-            chatCollection = stateStore.getJsonObject(stateStore.AIChatCollection.get(0));
+            // 查询db
+            collsIt = colls.getJsonObjectAll();
         }
-        chatList = chatCollection.get("chatList").getAsJsonArray().asList().stream()
-                .map(JsonElement::getAsJsonObject)
-                .collect(Collectors.toList());
+
+        // 查询db
+        chatList = chatsManager.findByCollIdAll(collsIt.get("id").getAsString());
 
         updateChatList();
     }
 
-    private void loadInitialChatlist() {
-        currentChatList.addAll(chatList.subList(Math.max(chatList.size() - PAGE_SIZE, 0), chatList.size()));
-    }
+//    private void loadInitialChatlist() {
+//        currentChatList.addAll(chatList.subList(Math.max(chatList.size() - PAGE_SIZE, 0), chatList.size()));
+//        System.out.println(currentChatList);
+//    }
+//
+//    private void loadPreviousData() {
+//        if (currentIndex == 0) return;
+//        int newIndex = Math.max(0, currentIndex - PAGE_SIZE);
+//        int loadSize = Math.min(PAGE_SIZE, currentIndex - newIndex);
+//        List<JsonObject> newData = chatList.subList(newIndex, newIndex + loadSize);
+//        currentChatList.addAll(0, newData);
+//        if (currentChatList.size() > MAX_SIZE) {
+//            currentChatList.subList(MAX_SIZE, currentChatList.size()).clear(); // 删除尾部
+//        }
+//        currentIndex = newIndex;
+//        System.out.println(currentChatList);
+//        updateChatList();
+//    }
+//
+//    private void loadNextData() {
+//        if (currentIndex + currentChatList.size() >= chatList.size()) return;
+//        int newIndex = Math.min(chatList.size() - 1, currentIndex + PAGE_SIZE);
+//        int loadSize = Math.min(PAGE_SIZE, chatList.size() - newIndex);
+//        List<JsonObject> newData = chatList.subList(newIndex, newIndex + loadSize);
+//        currentChatList.addAll(newData);
+//        if (currentChatList.size() > MAX_SIZE) {
+//            currentChatList.subList(0, currentChatList.size() - MAX_SIZE).clear(); // 删除头部
+//        }
+//        currentIndex = newIndex - (Math.max(currentChatList.size() - MAX_SIZE, 0));
+//        System.out.println(currentChatList);
+//        updateChatList();
+//    }
 
-    private void loadPreviousData() {
-        if (currentIndex == 0) return;
-        int newIndex = Math.max(0, currentIndex - PAGE_SIZE);
-        int loadSize = Math.min(PAGE_SIZE, currentIndex - newIndex);
-        List<JsonObject> newData = chatList.subList(newIndex, newIndex + loadSize);
-        currentChatList.addAll(0, newData);
-        if (currentChatList.size() > MAX_SIZE) {
-            currentChatList.subList(MAX_SIZE, currentChatList.size()).clear(); // 删除尾部
-        }
-        currentIndex = newIndex;
-        updateChatList();
-    }
+//    private static class ListViewModel extends AbstractListModel<JsonObject> {
+//        private final List<JsonObject> list;
+//
+//        public ListViewModel() {
+//            this.list = new ArrayList<>();
+//        }
+//
+//        @Override
+//        public int getSize() {
+//            return list.size();
+//        }
+//
+//        @Override
+//        public JsonObject getElementAt(int index) {
+//            return list.get(index);
+//        }
+//
+//        public void addList(JsonObject item) {
+//            // 通常新消息添加到末尾
+//            int index = list.size();
+//            list.add(item);
+//            // 通知JList数据在末尾添加了新的元素
+//            fireIntervalAdded(this, index, index);
+//        }
+//    }
+//
+//    private static class ListViewRender extends JBPanel implements ListCellRenderer<JsonObject> {
+//        private MessageComponent messageComponent;
+//        private Project projectContext; // 通常渲染器需要引用一些全局上下文
+//
+//        public ListViewRender(Project project) {
+//            this.projectContext = project;
+//            // 1. 设置渲染器自身的布局 (通常是 BorderLayout 或 FlowLayout)
+//            setLayout(new BorderLayout());
+//            setOpaque(true); // 确保背景颜色能显示
+//
+//            // 2. 在构造函数中，只实例化一个 MessageComponent 实例。
+//            //    这个实例会被 JList 反复地复用。
+//            messageComponent = new MessageComponent(projectContext, null, null);
+//            add(messageComponent, BorderLayout.CENTER);
+//        }
+//
+//        @Override
+//        public Component getListCellRendererComponent(JList list, JsonObject value, int index, boolean isSelected, boolean cellHasFocus) {
+//            messageComponent.updateContent(value);
+//            return this; // 返回自身作为渲染组件
+//        }
+//    }
 
-    private void loadNextData() {
-        if (currentIndex + currentChatList.size() >= chatList.size()) return;
-        int newIndex = Math.min(chatList.size() - 1, currentIndex + PAGE_SIZE);
-        int loadSize = Math.min(PAGE_SIZE, chatList.size() - newIndex);
-        List<JsonObject> newData = chatList.subList(newIndex, newIndex + loadSize);
-        currentChatList.addAll(newData);
-        if (currentChatList.size() > MAX_SIZE) {
-            currentChatList.subList(0, currentChatList.size() - MAX_SIZE).clear(); // 删除头部
+    public void initAIFunctionIcon() {
+        String panelName = ThisMainPanel.getPanelName();
+        String currentModel = AISetInfo.get("aiModel").getAsString();
+        JsonArray modelList = DBUtil.getLLMsByKey(ThisMainPanel.getAIKey());
+
+        // 设置底部图片上传icon
+        uploadImgButton.setVisible(stateStore.currentModelCanImage(panelName, currentModel, modelList));
+
+        // 设置底部联网icon
+        if (stateStore.currentModelCanOnline(panelName,currentModel)) {
+            boolean activeOnline = AISetInfo.get("online").getAsBoolean();
+            webSearchButton.setVisible(true);
+            webSearchButton.setIcon(IconLoader.getIcon(activeOnline ? "/icons/web_search_active.svg" : "/icons/web_search.svg", MainPanel.class));
         }
-        currentIndex = newIndex - (Math.max(currentChatList.size() - MAX_SIZE, 0));
-        updateChatList();
     }
 
     public void initAIInfoPanel() {
         JPanel eastPanel = new JPanel(new BorderLayout());
-        eastPanel.setBorder(JBUI.Borders.emptyRight(12));
+        eastPanel.setBorder(JBUI.Borders.emptyRight(JBUI.scale(8)));
 
         JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.LEFT,0,0));// 从左到右排列
+        chatMatchButton = new IconButton("",AllIcons.Actions.Find);
+        chatMatchButton.setToolTipText("Match Content\nCtrl+F");
+        chatMatchButton.addActionListener(e -> {
+            findMatchDialog.openDialog(ThisMainPanel,getRenderedChatList(),null);
+        });
+        actionPanel.add(chatMatchButton);
+
         chatSettingButton = new IconButton("Chat Setting",AllIcons.Actions.RefactoringBulb);
+        chatSettingButton.setToolTipText("Chat Setting\nCtrl+D");
         chatSettingButton.addActionListener(e -> {
             new ChatSettingDialog(ThisProject).openDialog((JComponent) ThisMainPanel.getContentPanel().getParent(),AIVendorSet);
         });
@@ -488,26 +704,49 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
 
         infoTopPanel.add(eastPanel, BorderLayout.EAST);
 
-        JBLabel currentModel = new JBLabel();
+        JLabel currentModel = new JLabel();
         String currentModelStr = AISetInfo.get("aiModel").isJsonNull() ? "LLM：" : "LLM：" + AISetInfo.get("aiModel").getAsString();
         currentModel.setText(currentModelStr);
-        currentModel.setForeground(JBColor.namedColor("Label.infoForeground", new JBColor(Gray.x80, Gray.x8C)));
+        currentModel.setForeground(new JBColor(Gray.x80, Gray.x8C));
         currentModel.setFont(JBUI.Fonts.create(Font.DIALOG,14));
         currentModel.setBorder(JBUI.Borders.emptyBottom(4));
+
+        currentModel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (!AISetInfo.get("aiModel").isJsonNull() && !AISetInfo.get("aiModel").getAsString().isBlank()) {
+                    ClipboardUtil.setStr(AISetInfo.get("aiModel").getAsString());
+                    BalloonUtil.showBalloon("Copy successfully", MessageType.INFO,currentModel);
+                }
+            }
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                // 当鼠标进入组件区域时，设置光标为手型
+                currentModel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                // 当鼠标移出组件区域时，恢复光标为原来的值
+                currentModel.setCursor(Cursor.getDefaultCursor());
+            }
+        });
+
         infoPanel.add(currentModel,BorderLayout.NORTH);
 
         JPanel southInfoPanel = new JPanel();
         southInfoPanel.setLayout(new BoxLayout(southInfoPanel, BoxLayout.X_AXIS));
+        boolean isStream = AISetInfo.get("aiStream").getAsBoolean();
         JLabel streamInfo = new JLabel();
-        String streamInfoStr = AISetInfo.get("aiStream").getAsBoolean() ? "Stream Speed：" + AISetInfo.get("streamSpeed") : "Stream：Off";
+        String streamInfoStr = isStream ? "Stream Speed：" + AISetInfo.get("streamSpeed") : "Stream：Off";
         streamInfo.setText(streamInfoStr);
         streamInfo.setFont(JBUI.Fonts.toolbarFont());
+        streamInfo.setForeground(isStream ? new JBColor(Color.decode("#4db2dd"),Color.decode("#4db2dd")) : streamInfo.getForeground());
         southInfoPanel.add(streamInfo);
 
         JLabel promptsInfo = new JLabel();
         boolean promptsCutIn = AISetInfo.get("promptsCutIn").getAsBoolean();
         promptsInfo.setBorder(JBUI.Borders.emptyLeft(12));
-        promptsInfo.setForeground(JBColor.namedColor("Label.infoForeground",promptsCutIn ? new JBColor(Color.decode("#ee9e26"), Color.decode("#ee9e26")) : new JBColor(Gray.x80, Gray.x8C)));
+        promptsInfo.setForeground(promptsCutIn ? new JBColor(Color.decode("#ee9e26"), Color.decode("#ee9e26")) : new JBColor(Gray.x80, Gray.x8C));
         String promptsInfoStr = promptsCutIn ? "Prompts：On" : "Prompts：Off";
         promptsInfo.setText(promptsInfoStr);
         promptsInfo.setFont(JBUI.Fonts.toolbarFont());
@@ -520,99 +759,65 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
     }
 
     public void initAiInfo() {
-        AIInfo.addProperty("time","");
-        AIInfo.addProperty("content","");
-        AIInfo.addProperty("isMe",false);
-        AIInfo.addProperty("role","assistant");
-        AIInfo.addProperty("status",0); // 0 加载中 1加载完成 -1生成出错, -2网络错 -3输出中止 2持续输出
-        AIInfo.addProperty("isPin",false);
-        AIInfo.addProperty("showBtn",false);
-        AIInfo.addProperty("withContent",""); // 内容相关, 例如违法条例等
-        AIInfo.add("attachments",new JsonArray()); // 附件相关, 例如图片文件等
+        AIInfo = DBUtil.initAIInfo().deepCopy();
 
-        if (AIVendorSet.equals(CFAISettingPanel.class)) {
-            AIInfo.addProperty("name", MsgEntryBundle.message("ui.setting.server.cloudflare.name"));
-            AIInfo.addProperty("icon",AIAssistantIcons.CF_AI_URL);
-        } else if (AIVendorSet.equals(GoogleAISettingPanel.class)) {
-            AIInfo.addProperty("name",MsgEntryBundle.message("ui.setting.server.google.name"));
-            AIInfo.addProperty("icon",AIAssistantIcons.GOOGLE_AI_URL);
-        } else if (AIVendorSet.equals(GroqAISettingPanel.class)) {
-            AIInfo.addProperty("name",MsgEntryBundle.message("ui.setting.server.groq.name"));
-            AIInfo.addProperty("icon",AIAssistantIcons.GROQ_AI_URL);
-        }
+        AIInfo.addProperty("name",ThisMainPanel.getAIName());
+        AIInfo.addProperty("icon",ThisMainPanel.getAIIcon());
     }
 
     public void initMyInfo() {
-        MyInfo.addProperty("time","");
-        MyInfo.addProperty("icon", AIAssistantIcons.ME_URL);
-        MyInfo.addProperty("name","我");
-        MyInfo.addProperty("content","");
-        MyInfo.addProperty("isMe",true);
-        MyInfo.addProperty("role","user");
-        MyInfo.addProperty("status",1); // 0 加载中 1加载完成 -1生成出错, -2网络错 -3输出中止 2持续输出
-        MyInfo.addProperty("isPin",false);
-        MyInfo.addProperty("showBtn",false);
-        MyInfo.addProperty("withContent",""); // 内容相关, 例如违法条例等
-
-        MyInfo.add("attachments",new JsonArray()); // 附件相关, 例如图片文件等
+        MyInfo = DBUtil.initMyInfo().deepCopy();
     }
 
     public void initAISetInfo() {
-        if (AIVendorSet.equals(CFAISettingPanel.class)) {
-            AISetInfo.addProperty("aiModel",stateStore.CFCurrentModel);
-            AISetInfo.addProperty("aiStream",stateStore.CFEnableStream);
-            AISetInfo.addProperty("streamSpeed",stateStore.CFStreamSpeed);
-            AISetInfo.addProperty("promptsCutIn",stateStore.CFEnablePrompts);
-            AISetOutputInfo = stateStore.getCFSetOutputConf();
-            AIPrompts = stateStore.CFPrompts;
-        } else if (AIVendorSet.equals(GoogleAISettingPanel.class)) {
-            AISetInfo.addProperty("aiModel",stateStore.GOCurrentModel);
-            AISetInfo.addProperty("aiStream",stateStore.GOEnableStream);
-            AISetInfo.addProperty("streamSpeed",stateStore.GOStreamSpeed);
-            AISetInfo.addProperty("promptsCutIn",stateStore.GOEnablePrompts);
-            AISetOutputInfo = stateStore.getGOSetOutputConf();
-            AIPrompts = stateStore.GOPrompts;
-        } else if (AIVendorSet.equals(GroqAISettingPanel.class)) {
-            AISetInfo.addProperty("aiModel",stateStore.GRCurrentModel);
-            AISetInfo.addProperty("aiStream",stateStore.GREnableStream);
-            AISetInfo.addProperty("streamSpeed",stateStore.GRStreamSpeed);
-            AISetInfo.addProperty("promptsCutIn",stateStore.GREnablePrompts);
-            AISetOutputInfo = stateStore.getGRSetOutputConf();
-            AIPrompts = stateStore.GRPrompts;
-        }
+        JsonObject settingInfo = stateStore.getAISettingInfo(ThisMainPanel.getPanelName());
+
+        AISetInfo.addProperty("aiModel",settingInfo.get("aiModel").getAsString());
+        AISetInfo.addProperty("aiStream",settingInfo.get("aiStream").getAsBoolean());
+        AISetInfo.addProperty("online",settingInfo.get("online").getAsBoolean());
+        AISetInfo.addProperty("streamSpeed",settingInfo.get("streamSpeed").getAsInt());
+        AISetInfo.addProperty("promptsCutIn",settingInfo.get("promptsCutIn").getAsBoolean());
+        AISetInfo.add("apiKeys",settingInfo.get("apiKeys").getAsJsonArray());
+        AISetOutputInfo = settingInfo.get("outputConf").getAsJsonObject();
+        AIPrompts = settingInfo.get("prompts").getAsJsonArray().asList().stream() // 将 JsonArray 转换为 List<JsonElement> 并创建流
+                .filter(JsonElement::isJsonObject)   // 过滤出所有是 JsonObject 的元素
+                .map(JsonElement::getAsJsonObject)   // 将这些元素强制转换为 JsonObject
+                .collect(Collectors.toList());
     }
 
     public void scrollToBottom() {
-        SwingUtilities.invokeLater(() -> { // 在Swing事件调度线程上执行
-            JScrollBar verticalScrollBar = myScrollPane.getVerticalScrollBar();
-            int max = verticalScrollBar.getMaximum();
-            if (max > 0) { // 避免在内容为空的情况下的异常
-                verticalScrollBar.setValue(max);
-            }
-        });
+        // SwingUtilities.invokeLater(() -> { // 在Swing事件调度线程上执行
+        // 这个极快地“绘制错误位置” -> “滚动” -> “绘制正确位置”的过程，在人眼中就表现为一次闪屏。
+        //    JScrollBar verticalScrollBar = myScrollPane.getVerticalScrollBar();
+        //    int max = verticalScrollBar.getMaximum();
+        //     if (max > 0) { // 避免在内容为空的情况下的异常
+        //        verticalScrollBar.setValue(max);
+        //    }
+        //});
+
+        // 请求 myList (内容面板) 将这个矩形区域滚动到可见位置
+        Rectangle bottomRect = new Rectangle(0, myList.getHeight() - 1, 1, 1);
+        // Swing 会自动计算 JScrollPane 需要滚动多少
+        myList.scrollRectToVisible(bottomRect);
+    }
+
+    public void scrollToBottomAfterLayout() {
+        // 1. 升起“旗帜”，告诉监听器，下一次尺寸变化后需要滚动。
+        shouldScrollToBottom = true;
+        // 2. 触发重新布局。这会使 myList 的尺寸发生变化，
+        //    从而触发我们上面添加的 componentResized 事件。
+        //    只需要 revalidate 最外层的容器即可。
+        revalidate();
+        repaint();
+    }
+
+    public void scrollToTarget(MessageComponent component,int startIndex,int endIndex) {
+        component.setScrollToHighlight(component,myScrollPane,startIndex,endIndex);
     }
 
     public void updateLayout() {
-        LayoutManager layout = myList.getLayout();
-        int componentCount = myList.getComponentCount();
-        for (int i = 0 ; i< componentCount ; i++) {
-            layout.removeLayoutComponent(myList.getComponent(i));
-            layout.addLayoutComponent(null,myList.getComponent(i));
-        }
         myList.revalidate();
         myList.repaint();
-        myScrollPane.revalidate();
-        myScrollPane.repaint();  // 确保ScrollPane也重新验证布局和重绘
-    }
-
-    @Override
-    protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
-        if (myScrollValue > 0) {
-            g.setColor(JBColor.border());
-            int y = myScrollPane.getY() - 1;
-            g.drawLine(0, y, getWidth(), y);
-        }
     }
 
     @Override
@@ -620,69 +825,71 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
         return !isVisible();
     }
 
-    static class MyAdjustmentListener implements AdjustmentListener {
-
-        @Override
-        public void adjustmentValueChanged(AdjustmentEvent e) {
-            JScrollBar source = (JScrollBar) e.getSource();
-            if (!source.getValueIsAdjusting()) {
-                source.setValue(source.getMaximum());
-            }
-        }
-    }
-
     private @NotNull IconButton getSettingButton(Class<?> settingPanel) {
-        IconButton settingButton = new IconButton("setting", IconLoader.getIcon("/icons/setting.svg",MainPanel.class));
+        IconButton settingButton = new IconButton("", IconLoader.getIcon("/icons/setting.svg",MainPanel.class));
+        settingButton.setToolTipText("Setting\nCtrl+Alt+A");
         settingButton.addActionListener(e -> {
-            if (settingPanel.equals(CFAISettingPanel.class)) {
-                ShowSettingsUtil.getInstance().showSettingsDialog(ThisProject, CFAISettingPanel.class);
-            } else if (settingPanel.equals(GoogleAISettingPanel.class)) {
-                ShowSettingsUtil.getInstance().showSettingsDialog(ThisProject, GoogleAISettingPanel.class);
-            } else if (settingPanel.equals(GroqAISettingPanel.class)) {
-                ShowSettingsUtil.getInstance().showSettingsDialog(ThisProject, GroqAISettingPanel.class);
-            }
+            SwingUtilities.invokeLater(() -> ShowSettingsUtil.getInstance().showSettingsDialog(ThisProject, MAPPINGS.get(settingPanel.getName())));
         });
         return settingButton;
     }
 
     private @NotNull IconButton getImageButton() {
-        IconButton imageButton = new IconButton("choose image", IconLoader.getIcon("/icons/image.svg",MainPanel.class));
+        IconButton imageButton = new IconButton("Choose Image", IconLoader.getIcon("/icons/image.svg",MainPanel.class));
         imageButton.addActionListener(e -> handleImageUpload());
         return imageButton;
     }
 
+    private @NotNull IconButton getWebSearchButton() {
+        IconButton webButton = new IconButton("Web Search", IconLoader.getIcon("/icons/web_search.svg",MainPanel.class));
+        webButton.addActionListener(e -> {
+            boolean setStatus = !AISetInfo.get("online").getAsBoolean();
+            String setIcon = setStatus ? "/icons/web_search_active.svg" : "/icons/web_search.svg";
+            AISetInfo.addProperty("online", setStatus);
+            webButton.setIcon(IconLoader.getIcon(setIcon,MainPanel.class));
+            // 这里需要写入state
+            stateStore.setAISettingInfoByKey(ThisMainPanel.getPanelName(),"online", new JsonPrimitive(setStatus));
+
+            if (setStatus) {
+                BalloonUtil.showBalloon("Web search is active!", MessageType.INFO, webButton);
+            }
+        });
+        return webButton;
+    }
+
     private void handleImageUpload() {
         if (!checkImagesLen()) return;
-        Image img = ImgUtils.chooseImage(ThisProject);
-        if (img != null) {
-            addImage(img);
+        List<BufferedImage> imageList = ImgUtils.chooseImage(ThisProject);
+        if (!imageList.isEmpty()) {
+            addImage(imageList);
         }
     }
 
     private void pasteImageUpload() {
-        if (!checkImagesLen()) return;
-        Image img = inputTextArea.pasteFromClipboardImage();
-        if (img != null) {
-            addImage(img);
+        if (!checkImagesLen() && uploadImgButton.isVisible()) {
+            return;
         }
+        List<BufferedImage> imageList = inputTextArea.pasteFromClipboardImage();
+        addImage(imageList);
     }
 
-    private void addImage(Image img) {
-        if (img != null) {
-            ImageView imagePanel = new ImageView(img);
-            doUploadImage(img,imagePanel);
+    private void addImage(List<BufferedImage> imageList) {
+        for (BufferedImage image: imageList) {
+            ImageView imagePanel = new ImageView(image);
+            imagePanel.setMessageGroupCom(this); // 加上一个全局引用
+
+            doUploadImage(image,imagePanel);
 
             imagePanel.getDeleteButton().addActionListener(e -> {
                 removeImage(imagePanel);
             });
 
             imagePanel.getReUploadButton().addActionListener(e -> {
-                doUploadImage(img,imagePanel);
+                doUploadImage(image,imagePanel);
             });
-
             uploadListPanel.add(imagePanel);
-            uploadListPanel.updateUI();
         }
+        uploadListPanel.updateUI();
     }
 
     private void doUploadImage(Image img,ImageView imagePanel) {
@@ -696,12 +903,15 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
             protected void done() {
                 try {
                     JsonObject resData = (JsonObject) get(); // 获取 doInBackground() 的结果，如果发生异常，会在这里抛出
+                    //
+                    System.out.println(resData);
+
                     String fileName = resData.get("fileName").getAsString();
                     String url = resData.has("url") ? resData.get("url").getAsString() : null;
-                    imagePanel.setImage(url,fileName);
+                    imagePanel.setImage(url,fileName,resData);
                     imagePanel.setLoading(false);
                 } catch (InterruptedException | ExecutionException e) {
-                    imagePanel.setImage(null,null);
+                    imagePanel.setImage(null,null, null);
                     imagePanel.setLoading(false);
                     System.out.println("doUploadImage error：" + e.getMessage());
                 }
@@ -711,7 +921,7 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
 
     private Boolean checkImagesLen() {
         if (uploadListPanel.getComponentCount() > 9) {
-            Notifications.Bus.notify(new Notification(MsgEntryBundle.message("group.id"),"Add error","Cannot add more images.",NotificationType.ERROR));
+            BalloonUtil.showBalloon("Cannot add more images.", MessageType.WARNING,uploadListPanel);
             return false;
         }
         return true;
@@ -733,8 +943,9 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
                     JsonObject attachmentItem = new JsonObject();
                     attachmentItem.addProperty("fileName",ImageComponent.getName());
                     attachmentItem.addProperty("type","image");
-                    attachmentItem.addProperty("mimeType","image/jpg"); // 强制jpg
+                    attachmentItem.addProperty("mimeType",ImageComponent.getFileData().get("mimeType").getAsString());
                     attachmentItem.addProperty("url",ImageComponent.getUrl());
+                    attachmentItem.add("metaData",ImageComponent.getFileData().getAsJsonObject());
                     upLoadList.add(attachmentItem);
                 }
             }
@@ -756,13 +967,12 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
     }
 
     public void aroundRequest(boolean status) {
-        progressBar.setIndeterminate(status);
-        progressBar.setVisible(status);
         button.setEnabled(!status);
         if (status) {
             setItemsDisabledRerunAndTrash(true);
             disabledCollectionAction(true);
             chatSettingButton.setEnabled(false);
+            chatMatchButton.setEnabled(false);
             actionSouthPanelActions.remove(button);
             actionSouthPanelActions.add(stopGenerating,BorderLayout.EAST);
         } else {
@@ -773,31 +983,68 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
             setItemsDisabled(false);
             disabledCollectionAction(false);
             chatSettingButton.setEnabled(true);
+            chatMatchButton.setEnabled(true);
             actionSouthPanelActions.remove(stopGenerating);
             actionSouthPanelActions.add(button,BorderLayout.EAST);
         }
         actionPanel.updateUI();
     }
 
-    public void addScrollListener() {
-        myScrollPane.getVerticalScrollBar().
-                addAdjustmentListener(scrollListener);
+    private void updateActionSouthPanelBg() {
+        SwingUtilities.invokeLater(() -> {
+            actionSouthPanel.setBackground(UIUtil.getTextFieldBackground());
+        });
     }
 
-    public void removeScrollListener() {
-        myScrollPane.getVerticalScrollBar().
-                removeAdjustmentListener(scrollListener);
+    private void updateInputTextAreaUI() {
+        SwingUtilities.invokeLater(() -> {
+            inputTextArea.getTextarea().setUI(new BasicTextAreaUI());
+            inputTextArea.clearBorder();
+            new InputPlaceholder("Shift + Enter to line-warp, Ctrl + Enter to submit.", inputTextArea.getTextarea());  // 添加 placeholder
+        });
     }
 
     public JsonObject getAISetInfo() {
         return AISetInfo;
     }
 
+    public String getAIVendorKey() {
+        return ThisMainPanel.getAIKey();
+    }
+
     public JsonObject getChatCollection () {
-        return chatCollection;
+        return collsIt;
     }
 
     public JsonObject getAISetOutputInfo() {
         return AISetOutputInfo;
+    }
+
+    public JsonObject getWeightedApikey() {
+        if (AISetInfo.has("apiKeys")) {
+            JsonArray apiKeys = AISetInfo.get("apiKeys").getAsJsonArray();
+            return OtherUtil.weightedRandomTarget(JsonUtil.getListJsonObject(apiKeys));
+        }
+        return new JsonObject();
+    }
+
+    @Override
+    public void dispose() {
+        findMatchDialog.dispose();
+
+        removeInfo();
+        removeUploadList();
+        removeList();
+    }
+
+    @Override
+    public void onUpdateMessageState(String chatId, JsonObject itemData) {
+        updateMessageState(chatId,itemData);
+    }
+
+    @Override
+    public void onSetProgressBar(boolean isShow) {
+        progressBar.setIndeterminate(isShow);
+        progressBar.setVisible(isShow);
     }
 }

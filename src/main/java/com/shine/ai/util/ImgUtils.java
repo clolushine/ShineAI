@@ -27,7 +27,9 @@ import java.io.*;
 import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 
@@ -143,9 +145,9 @@ public class ImgUtils extends ImgUtil {
         return scaledImage;
     }
 
-    public static BufferedImage chooseImage(Project project) {
-        BufferedImage image = null;
-        FileChooserDescriptor descriptor = new FileChooserDescriptor(true, false, false, false, false, false)
+    public static List<BufferedImage> chooseImage(Project project) {
+        List<BufferedImage> imageList = new ArrayList<>();
+        FileChooserDescriptor descriptor = new FileChooserDescriptor(true, false, false, false, false, true)
                 .withFileFilter(file -> {
                     String ext = file.getExtension();
                     return ext != null && (ext.equalsIgnoreCase("jpg") ||
@@ -155,19 +157,23 @@ public class ImgUtils extends ImgUtil {
                 });
         descriptor.setTitle("Choose Image");
         descriptor.setDescription("Choose image file.");
-        VirtualFile file = FileChooser.chooseFile(descriptor, project, null);
-        if (file != null) {
-            try {
-                image = Imaging.getBufferedImage(new File(file.getPath()));
-            } catch (Exception ex) {
-                Notifications.Bus.notify(
-                        new Notification(MsgEntryBundle.message("group.id"),
-                                "Load error",
-                                "Cannot load this image.",
-                                NotificationType.ERROR));
+        VirtualFile[] files = FileChooser.chooseFiles(descriptor, project, null);
+        for (VirtualFile file : files) {
+            if (file != null) {
+                try {
+                  BufferedImage image = Imaging.getBufferedImage(new File(file.getPath()));
+                  imageList.add(image);
+                } catch (Exception ex) {
+                    Notifications.Bus.notify(
+                            new Notification(MsgEntryBundle.message("group.id"),
+                                    "Load error",
+                                    "Cannot load this image.",
+                                    NotificationType.ERROR));
+                }
             }
+
         }
-        return image;
+        return imageList;
     }
 
     public static void saveAsToImage(Image image) {
@@ -269,7 +275,7 @@ public class ImgUtils extends ImgUtil {
         String toPath = String.valueOf(FileUtil.getCachePath( String.format("%s.%s",fileName,format)));
         try (OutputStream outputStream = new FileOutputStream(toPath)) {
             Thumbnails.of((BufferedImage) image)
-                    .scale(0.8)
+                    .scale(0.6)
                     .outputFormat(format)
                     .outputQuality(quality)
                     .toOutputStream(outputStream);

@@ -2,15 +2,32 @@ package com.shine.ai.util;
 
 import com.vladsch.flexmark.html.HtmlRenderer;
 import com.vladsch.flexmark.parser.Parser;
+import com.vladsch.flexmark.ext.tables.TablesExtension; // 导入表格扩展
+import com.vladsch.flexmark.util.data.MutableDataSet; // 用于配置选项
+import com.vladsch.flexmark.util.misc.Extension; // 用于扩展列表
 import com.vladsch.flexmark.util.ast.Node;
 import org.jsoup.nodes.Element;
 
+import java.util.List;
+
 
 public class HtmlUtil {
+
     public static String md2html(String markdown) {
-        // 创建 Parser 和 Renderer
-        Parser parser = Parser.builder().build();
-        HtmlRenderer renderer = HtmlRenderer.builder().build(); // 可以添加扩展
+        // 1. 定义要启用的扩展
+        List<Extension> extensions = List.of(
+                TablesExtension.create() // 启用表格扩展
+                // 如果还需要其他扩展，例如GFM（GitHub Flavored Markdown）的其他特性，可以继续添加
+                // TaskListExtension.create()
+        );
+
+        MutableDataSet options = new MutableDataSet();
+        options.set(Parser.EXTENSIONS, extensions);
+
+        // 3. 使用配置选项创建 Parser 和 Renderer
+        Parser parser = Parser.builder(options).build();
+        HtmlRenderer renderer = HtmlRenderer.builder(options).build();
+
         // 解析和渲染
         Node document = parser.parse(markdown);
         return renderer.render(document);

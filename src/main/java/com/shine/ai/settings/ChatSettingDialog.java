@@ -1,11 +1,13 @@
 package com.shine.ai.settings;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.intellij.icons.AllIcons;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.ComboBox;
 import com.intellij.openapi.ui.MessageDialogBuilder;
 import com.intellij.openapi.ui.MessageType;
+import com.intellij.ui.JBColor;
 import com.intellij.ui.TitledSeparator;
 import com.intellij.ui.components.fields.ExpandableTextField;
 import com.intellij.ui.components.panels.VerticalLayout;
@@ -17,26 +19,32 @@ import com.shine.ai.ui.MainPanel;
 import com.shine.ai.ui.MyScrollPane;
 import com.shine.ai.util.BalloonUtil;
 import com.shine.ai.util.GeneratorUtil;
+import com.shine.ai.util.JsonUtil;
 import com.shine.ai.util.StringUtil;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import static com.shine.ai.MyToolWindowFactory.ACTIVE_CONTENT;
 
 public class ChatSettingDialog extends JDialog {
+    private final AIAssistantSettingsState stateStore = AIAssistantSettingsState.getInstance();
+
     private final Project project;
     private static Class<?> settingPanel;
     private static JsonObject SetOutputConf;
     private static Boolean enablePrompts;
-    private static List<String> thisPrompts;
+    private static List<JsonObject> thisPrompts;
 
     private final JPanel promptList = new JPanel(new VerticalLayout(JBUI.scale(10)));
     private final MyScrollPane promptScrollPane = new MyScrollPane(promptList, ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
@@ -52,11 +60,15 @@ public class ChatSettingDialog extends JDialog {
     private JSpinner temperatureSpinner;
     private JSpinner topPSpinner;
     private JSpinner topKSpinner;
+    private JSpinner freqPSpinner;
+    private JSpinner presPSpinner;
     private JSlider maxTokenSlider;
     private JSlider historyLengthSlider;
     private JSlider zipHistoryBySizeSlider;
     private JLabel topPHelpLabel;
     private JLabel topKHelpLabel;
+    private JLabel freqPHelpLabel;
+    private JLabel presPHelpLabel;
     private JLabel maxTokensHelpLabel;
     private JLabel historyLengthHelpLabel;
     private JLabel zipHistoryBySizeHelpLabel;
@@ -71,6 +83,7 @@ public class ChatSettingDialog extends JDialog {
     private JButton addPromptButton;
     private JPanel promptsListPanel;
     private JLabel promptsCountLabel;
+    private JLabel promptsDataHelpLabel;
 
     public ChatSettingDialog(Project project) {
         this.project = project;
@@ -82,12 +95,14 @@ public class ChatSettingDialog extends JDialog {
         apply();
         dispose();
         getMainPanel().refreshInfo();
+        // 刷新显示状态
         getMainPanel().getPromptsPanel().refreshStatus();
     }
 
     private void onCancel() {
         // add your code here if necessary
         dispose();
+        // 刷新显示状态
         getMainPanel().getPromptsPanel().refreshStatus();
     }
 
@@ -103,14 +118,16 @@ public class ChatSettingDialog extends JDialog {
         contentPane.setBorder(JBUI.Borders.empty(6,16,16,16));
 
         assert promptsListPanel != null;
-        promptsListPanel.setPreferredSize(new Dimension(promptsListPanel.getWidth(),160));
+        promptsListPanel.setPreferredSize(new Dimension(promptsListPanel.getWidth(),192));
         promptScrollPane.setBorder(JBUI.Borders.empty());
         promptsListPanel.add(promptScrollPane);
         promptScrollPane.getVerticalScrollBar().setAutoscrolls(true);
 
-        SpinnerNumberModel temperatureModel = new SpinnerNumberModel(0.0, 0.0, 1.0, 0.1);
+        SpinnerNumberModel temperatureModel = new SpinnerNumberModel(0.0, 0.0, 2.0, 0.1);
         SpinnerNumberModel topPModel = new SpinnerNumberModel(0.0, 0.0, 1.0, 0.1);
-        SpinnerNumberModel topKModel = new SpinnerNumberModel(1, 1, 100, 1);
+        SpinnerNumberModel topKModel = new SpinnerNumberModel(1, 1, 50, 1);
+        SpinnerNumberModel freqPModel = new SpinnerNumberModel(0.0, -2.0, 2.0, 0.1);
+        SpinnerNumberModel presPModel = new SpinnerNumberModel(0.0, -2.0, 2.0, 0.1);
 
         assert temperatureSpinner != null;
         temperatureSpinner.setModel(temperatureModel);
@@ -118,24 +135,27 @@ public class ChatSettingDialog extends JDialog {
         assert addPromptButton!= null;
         addPromptButton.setIcon(AllIcons.General.Add);
         addPromptButton.addActionListener(e -> {
-            addNewPrompt(promptList);
+            addNewPrompt();
         });
 
         promptList.addContainerListener(new ContainerListener() {
             @Override
             public void componentAdded(ContainerEvent e) {
-                promptsCountLabel.setText("total：" + promptList.getComponentCount() + " prompt");
+                promptsCountLabel.setText("total：" + promptList.getComponentCount() + " prompts");
             }
 
             @Override
             public void componentRemoved(ContainerEvent e) {
-                promptsCountLabel.setText("total：" + promptList.getComponentCount() + " prompt");
+                promptsCountLabel.setText("total：" + promptList.getComponentCount() + " prompts");
             }
         });
 
         assert enablePromptsCheckBox!= null;
-        enablePromptsCheckBox.addChangeListener(e -> {
-            enablePrompts = enablePromptsCheckBox.isSelected();
+        enablePromptsCheckBox.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                enablePrompts = enablePromptsCheckBox.isSelected();
+            }
         });
 
         assert topPSpinner != null;
@@ -143,6 +163,12 @@ public class ChatSettingDialog extends JDialog {
 
         assert topKSpinner != null;
         topKSpinner.setModel(topKModel);
+
+        assert freqPSpinner != null;
+        freqPSpinner.setModel(freqPModel);
+
+        assert presPSpinner != null;
+        presPSpinner.setModel(presPModel);
 
         assert buttonOK != null;
         buttonOK.addActionListener(new ActionListener() {
@@ -183,7 +209,6 @@ public class ChatSettingDialog extends JDialog {
 //                transferFocus();       // 立即移除焦点
                 reset(); // 在对话框显示时重置为默认值
                 initPromptsPanel();
-                scrollToBottom();
             }
         });
 
@@ -215,6 +240,13 @@ public class ChatSettingDialog extends JDialog {
             zipHistoryBySizeSlider.setEnabled(enableZipHistoryBySize.isSelected());
         });
 
+        enableZipHistoryBySize.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                zipHistoryBySizeSlider.setEnabled(enableZipHistoryBySize.isSelected());
+            }
+        });
+
         initHelp();
     }
 
@@ -241,23 +273,18 @@ public class ChatSettingDialog extends JDialog {
     }
 
     public void initPromptsPanel() {
-        AIAssistantSettingsState stateStore = AIAssistantSettingsState.getInstance();
         if (!thisPrompts.isEmpty()) {
-            for (String item : thisPrompts) {
-                PromptItemComponent promptItem = new PromptItemComponent(stateStore.getJsonObject(item));
+            for (JsonObject item : thisPrompts) {
+                PromptItemComponent promptItem = new PromptItemComponent(item);
                 promptList.add(promptItem);
             }
+
             updateLayout();
+            scrollToBottom();
         }
     }
 
     public void updateLayout() {
-        LayoutManager layout = promptList.getLayout();
-        int componentCount = promptList.getComponentCount();
-        for (int i = 0 ; i< componentCount ; i++) {
-            layout.removeLayoutComponent(promptList.getComponent(i));
-            layout.addLayoutComponent(null,promptList.getComponent(i));
-        }
         promptList.revalidate();
         promptList.repaint();
     }
@@ -267,14 +294,9 @@ public class ChatSettingDialog extends JDialog {
     }
 
     public void resetByDefault() {
-        AIAssistantSettingsState state = AIAssistantSettingsState.getInstance();
-        if (settingPanel.equals(CFAISettingPanel.class)) {
-            state.CFSetOutputConf = state.setDefaultSetOutputConf();
-        } else if (settingPanel.equals(GoogleAISettingPanel.class)) {
-            state.GOSetOutputConf = state.setDefaultSetOutputConf();
-        } else if (settingPanel.equals(GroqAISettingPanel.class)) {
-            state.GRSetOutputConf = state.setDefaultSetOutputConf();
-        }
+        SetOutputConf = stateStore.defaultSetOutputConf().deepCopy();
+        stateStore.setAISettingInfoByKey(getMainPanel().getPanelName(),"outputConf",SetOutputConf);
+        reset();
     }
 
     public void reset() {
@@ -283,6 +305,8 @@ public class ChatSettingDialog extends JDialog {
         temperatureSpinner.setValue(SetOutputConf.get("temperature").getAsDouble());
         topPSpinner.setValue(SetOutputConf.get("top_p").getAsDouble());
         topKSpinner.setValue(SetOutputConf.get("top_k").getAsInt());
+        freqPSpinner.setValue(SetOutputConf.get("frequency_penalty").getAsDouble());
+        presPSpinner.setValue(SetOutputConf.get("presence_penalty").getAsDouble());
         maxTokenSlider.setValue(SetOutputConf.get("max_tokens").getAsInt());
         historyLengthSlider.setValue(SetOutputConf.get("history_length").getAsInt());
         enableZipHistoryBySize.setSelected(SetOutputConf.get("summary_swi").getAsBoolean());
@@ -290,72 +314,88 @@ public class ChatSettingDialog extends JDialog {
     }
 
     private void setSetOutputConf() {
-        AIAssistantSettingsState state = AIAssistantSettingsState.getInstance();
         SetOutputConf.addProperty("temperature",(double) temperatureSpinner.getValue());
         SetOutputConf.addProperty("top_p",(double) topPSpinner.getValue());
         SetOutputConf.addProperty("top_k",(int) topKSpinner.getValue());
+        SetOutputConf.addProperty("frequency_penalty",(double) freqPSpinner.getValue());
+        SetOutputConf.addProperty("presence_penalty",(double) presPSpinner.getValue());
         SetOutputConf.addProperty("max_tokens",maxTokenSlider.getValue());
         SetOutputConf.addProperty("history_length",historyLengthSlider.getValue());
         SetOutputConf.addProperty("summary_swi",enableZipHistoryBySize.isSelected());
         SetOutputConf.addProperty("summary_thr_len",zipHistoryBySizeSlider.getValue());
-        if (settingPanel.equals(CFAISettingPanel.class)) {
-            state.CFEnablePrompts = enablePrompts;
-            state.CFPrompts = thisPrompts;
-            state.setCFSetOutputConf(SetOutputConf);
-        } else if (settingPanel.equals(GoogleAISettingPanel.class)) {
-            state.GOEnablePrompts = enablePrompts;
-            state.GOPrompts = thisPrompts;
-            state.setGOSetOutputConf(SetOutputConf);
-        } else if (settingPanel.equals(GroqAISettingPanel.class)) {
-            state.GREnablePrompts = enablePrompts;
-            state.GRPrompts = thisPrompts;
-            state.setGRSetOutputConf(SetOutputConf);
-        }
+
+        // 创建
+        JsonObject setInfo = new JsonObject();
+
+        setInfo.addProperty("promptsCutIn", enablePrompts);
+
+        // 这里是独立响应的
+        //setInfo.add("prompts", JsonUtil.getJsonArray(thisPrompts));
+
+        setInfo.add("outputConf", SetOutputConf);
+        stateStore.setAISettingInfo(getMainPanel().getPanelName(),setInfo);
     }
 
-    private static void getSetOutputConf() {
-        AIAssistantSettingsState state = AIAssistantSettingsState.getInstance();
-        if (settingPanel.equals(CFAISettingPanel.class)) {
-            SetOutputConf = state.getCFSetOutputConf();
-            enablePrompts = state.CFEnablePrompts;
-            thisPrompts = state.CFPrompts;
-        } else if (settingPanel.equals(GoogleAISettingPanel.class)) {
-            SetOutputConf = state.getGOSetOutputConf();
-            enablePrompts = state.GOEnablePrompts;
-            thisPrompts = state.GOPrompts;
-        } else if (settingPanel.equals(GroqAISettingPanel.class)) {
-            SetOutputConf = state.getGRSetOutputConf();
-            enablePrompts = state.GREnablePrompts;
-            thisPrompts = state.GRPrompts;
-        }
+    private void getSetOutputConf() {
+        JsonObject settingInfo = stateStore.getAISettingInfo(getMainPanel().getPanelName());
+        SetOutputConf = settingInfo.get("outputConf").getAsJsonObject();
+        enablePrompts = settingInfo.get("promptsCutIn").getAsBoolean();
+        thisPrompts = settingInfo.get("prompts").getAsJsonArray().asList().stream() // 将 JsonArray 转换为 List<JsonElement> 并创建流
+                .filter(JsonElement::isJsonObject)   // 过滤出所有是 JsonObject 的元素
+                .map(JsonElement::getAsJsonObject)   // 将这些元素强制转换为 JsonObject
+                .collect(Collectors.toList());
     }
 
     public class PromptItemComponent extends JPanel {
         public PromptItemComponent(JsonObject promptItem) {
-            AIAssistantSettingsState stateStore = AIAssistantSettingsState.getInstance();
 
-            setLayout(new BorderLayout());
+            setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
             setBorder(JBUI.Borders.empty(6));
+
+            JCheckBox enableCheckBox = new JCheckBox();
+            enableCheckBox.setSelected(promptItem.has("enable") && promptItem.get("enable").getAsBoolean());
+            enableCheckBox.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    boolean isEnable = enableCheckBox.isSelected();
+                    for (int i = 0; i < thisPrompts.size(); i++) {
+                        JsonObject currentPrompt = thisPrompts.get(i);
+                        if (Objects.equals(currentPrompt.get("promptId").getAsString(), promptItem.get("promptId").getAsString())) {
+                            currentPrompt.addProperty("enable", isEnable);
+                            thisPrompts.set(i, currentPrompt); // 使用 set() 方法修改列表元素
+
+                            getMainPanel().getPromptsPanel().updatePrompt(currentPrompt);
+                            break; // 可选：如果 promptId 是唯一的，找到后可以跳出循环
+                        }
+                    }
+                }
+            });
+            add(enableCheckBox);
 
             JComboBox<String> roleSelect = new ComboBox<>();
             DefaultComboBoxModel<String> comboBoxModels = new DefaultComboBoxModel<>();
             Arrays.stream(AIAssistantSettingsState.promptsComboboxRolesString).forEach(comboBoxModels::addElement);
             roleSelect.setModel(comboBoxModels);
             roleSelect.setSelectedItem(promptItem.get("role").getAsString());
-            roleSelect.setPreferredSize(new Dimension(96, roleSelect.getPreferredSize().height));
+            roleSelect.setPreferredSize(new Dimension(92, roleSelect.getPreferredSize().height));
             // 添加监听器
-            roleSelect.addActionListener(e -> {
-                String selectedRole = (String) roleSelect.getSelectedItem();
-                for (int i = 0; i < thisPrompts.size(); i++) {
-                    JsonObject currentPrompt = stateStore.getJsonObject(thisPrompts.get(i));
-                    if (Objects.equals(currentPrompt.get("promptId").getAsString(), promptItem.get("promptId").getAsString())) {
-                        currentPrompt.addProperty("role", selectedRole);
-                        thisPrompts.set(i, stateStore.getJsonString(currentPrompt)); // 使用 set() 方法修改列表元素
-                        break; // 可选：如果 promptId 是唯一的，找到后可以跳出循环
+            roleSelect.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    String selectedRole = (String) roleSelect.getSelectedItem();
+                    for (int i = 0; i < thisPrompts.size(); i++) {
+                        JsonObject currentPrompt = thisPrompts.get(i);
+                        if (Objects.equals(currentPrompt.get("promptId").getAsString(), promptItem.get("promptId").getAsString())) {
+                            currentPrompt.addProperty("role", selectedRole);
+                            thisPrompts.set(i, currentPrompt); // 使用 set() 方法修改列表元素
+
+                            getMainPanel().getPromptsPanel().updatePrompt(currentPrompt);
+                            break; // 可选：如果 promptId 是唯一的，找到后可以跳出循环
+                        }
                     }
                 }
             });
-            add(roleSelect,BorderLayout.WEST);
+            add(roleSelect);
 
             ExpandableTextField promptFiled = new ExpandableTextField();
             promptFiled.setFont(new Font("Microsoft YaHei", Font.PLAIN,stateStore.CHAT_PANEL_FONT_SIZE));
@@ -378,42 +418,39 @@ public class ChatSettingDialog extends JDialog {
                 private void updateContent() {
                     String promptContent = promptFiled.getText();
                     for (int i = 0; i < thisPrompts.size(); i++) {
-                        JsonObject currentPrompt = stateStore.getJsonObject(thisPrompts.get(i));
+                        JsonObject currentPrompt = thisPrompts.get(i);
                         if (Objects.equals(currentPrompt.get("promptId").getAsString(), promptItem.get("promptId").getAsString())) {
                             currentPrompt.addProperty("content", promptContent);
-                            thisPrompts.set(i, stateStore.getJsonString(currentPrompt)); // 使用 set() 方法修改列表元素
+                            thisPrompts.set(i, currentPrompt); // 使用 set() 方法修改列表元素
+
+                            getMainPanel().getPromptsPanel().updatePrompt(currentPrompt);
                             break; // 可选：如果 promptId 是唯一的，找到后可以跳出循环
                         }
                     }
                 }
             });
-            add(promptFiled,BorderLayout.CENTER);
+            add(promptFiled);
 
             BubbleButton deleteP = getDeletePAction(this,promptItem);
-            add(deleteP,BorderLayout.EAST);
+            add(deleteP);
         }
     }
 
     private @NotNull BubbleButton getDeletePAction(JComponent component, JsonObject item) {
-        AIAssistantSettingsState stateStore = AIAssistantSettingsState.getInstance();
         BubbleButton deletePAction = new BubbleButton("", AllIcons.Actions.DeleteTagHover);
         deletePAction.addActionListener(e -> {
             promptList.remove(component);
-            thisPrompts.removeIf(it -> StringUtil.equals(stateStore.getJsonObject(it).get("promptId").getAsString(), item.get("promptId").getAsString()));
+            thisPrompts.removeIf(it -> StringUtil.equals(it.get("promptId").getAsString(), item.get("promptId").getAsString()));
 
-            JsonObject updateInfo = new JsonObject();
-            updateInfo.addProperty("chatId",item.get("promptId").getAsString());
-            updateInfo.addProperty("isPin",false);
-            getMainPanel().getContentPanel().modifyListItemInfo(updateInfo);
-            getMainPanel().getPromptsPanel().delete(item.get("promptId").getAsString(),component);
+            getMainPanel().getContentPanel().deletePin(item.get("promptId").getAsString());
+            getMainPanel().getPromptsPanel().delete(item.get("promptId").getAsString());
             updateLayout();
         });
         return deletePAction;
     }
 
-    public void addNewPrompt(JComponent _component) {
-        AIAssistantSettingsState stateStore = AIAssistantSettingsState.getInstance();
-        if (thisPrompts.size() >= 9) {
+    public void addNewPrompt() {
+        if (thisPrompts.size() >= 32) {
             BalloonUtil.showBalloon("Cannot add more prompt！！！", MessageType.ERROR,promptsListPanel);
             return;
         }
@@ -421,8 +458,12 @@ public class ChatSettingDialog extends JDialog {
         prompt.addProperty("promptId", GeneratorUtil.generateUniqueId());
         prompt.addProperty("role","system");
         prompt.addProperty("content","");
+        prompt.addProperty("enable",true);
         promptList.add(new PromptItemComponent(prompt));
-        thisPrompts.add(0,stateStore.getJsonString(prompt));
+        thisPrompts.add(prompt);
+        // 这里需要写入state
+        stateStore.setAISettingInfoByKey(getMainPanel().getPanelName(),"prompts", JsonUtil.getJsonArray(thisPrompts));
+
         updateLayout();
         scrollToBottom();
     }
@@ -453,6 +494,12 @@ public class ChatSettingDialog extends JDialog {
         topKHelpLabel.setFont(JBUI.Fonts.smallFont());
         topKHelpLabel.setForeground(UIUtil.getContextHelpForeground());
 
+        freqPHelpLabel.setFont(JBUI.Fonts.smallFont());
+        freqPHelpLabel.setForeground(UIUtil.getContextHelpForeground());
+
+        presPHelpLabel.setFont(JBUI.Fonts.smallFont());
+        presPHelpLabel.setForeground(UIUtil.getContextHelpForeground());
+
         maxTokensHelpLabel.setFont(JBUI.Fonts.smallFont());
         maxTokensHelpLabel.setForeground(UIUtil.getContextHelpForeground());
 
@@ -461,5 +508,8 @@ public class ChatSettingDialog extends JDialog {
 
         zipHistoryBySizeHelpLabel.setFont(JBUI.Fonts.smallFont());
         zipHistoryBySizeHelpLabel.setForeground(UIUtil.getContextHelpForeground());
+
+        promptsDataHelpLabel.setFont(JBUI.Fonts.smallFont());
+        promptsDataHelpLabel.setForeground(new JBColor(Color.decode("#ee9e26"), Color.decode("#ee9e26")));
     }
 }

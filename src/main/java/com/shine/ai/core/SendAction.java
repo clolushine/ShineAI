@@ -1,25 +1,19 @@
 package com.shine.ai.core;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.intellij.notification.Notification;
-import com.intellij.notification.NotificationType;
-import com.intellij.notification.Notifications;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.project.Project;
-import com.shine.ai.AbstractHandler;
-import com.shine.ai.CloudflareAIHandler;
-import com.shine.ai.GoogleAIHandler;
-import com.shine.ai.GroqAIHandler;
-import com.shine.ai.message.MsgEntryBundle;
+import com.intellij.openapi.ui.MessageType;
+import com.shine.ai.AIHandler;
+
 import com.shine.ai.settings.AIAssistantSettingsState;
-import com.shine.ai.settings.CFAISettingPanel;
-import com.shine.ai.settings.GoogleAISettingPanel;
-import com.shine.ai.settings.GroqAISettingPanel;
 import com.shine.ai.ui.MainPanel;
 import com.shine.ai.ui.MessageComponent;
 import com.shine.ai.ui.MessageGroupComponent;
+import com.shine.ai.util.BalloonUtil;
 import com.shine.ai.util.GeneratorUtil;
 import com.shine.ai.util.StringUtil;
 import okhttp3.Call;
@@ -40,6 +34,8 @@ public class SendAction extends AnAction {
 
     private final AIAssistantSettingsState stateStore = AIAssistantSettingsState.getInstance();
 
+    private final AIHandler AIHandler = new AIHandler();
+
     private String data;
 
     @Override
@@ -49,21 +45,13 @@ public class SendAction extends AnAction {
         doActionPerformed((MainPanel) mainPanel, data,null);
     }
 
-    private boolean presetCheck() {
+    private boolean presetCheck(MainPanel mainPanel) {
         if (stateStore == null) {
-            Notifications.Bus.notify(
-                    new Notification(MsgEntryBundle.message("group.id"),
-                            "Wrong setting",
-                            "Please login ShineAI first.",
-                            NotificationType.ERROR));
+            BalloonUtil.showBalloon("Please login ShineAI first.", MessageType.WARNING, mainPanel.getContentPanel());
             return false;
         }
         if (StringUtil.isEmpty(stateStore.Useremail) || StringUtil.isEmpty(stateStore.UserToken)) {
-            Notifications.Bus.notify(
-                    new Notification(MsgEntryBundle.message("group.id"),
-                            "Wrong setting",
-                            "Please login ShineAI first.",
-                            NotificationType.ERROR));
+            BalloonUtil.showBalloon("Please login ShineAI first.", MessageType.WARNING, mainPanel.getContentPanel());
             return false;
         }
         return true;
@@ -72,11 +60,7 @@ public class SendAction extends AnAction {
     private boolean currentModelCheck(MainPanel mainPanel) {
         JsonObject AISetInfo = mainPanel.getContentPanel().getAISetInfo();
         if (AISetInfo.get("aiModel").isJsonNull() || AISetInfo.get("aiModel").getAsString().isEmpty()) {
-            Notifications.Bus.notify(
-                    new Notification(MsgEntryBundle.message("group.id"),
-                            "Wrong setting",
-                            "Please select a AI model first.",
-                            NotificationType.ERROR));
+            BalloonUtil.showBalloon("Please select a AI model first.", MessageType.WARNING, mainPanel.getContentPanel());
             return false;
         }
         return true;
@@ -86,22 +70,8 @@ public class SendAction extends AnAction {
         return mainPanel.getContentPanel().getAISetInfo();
     }
 
-    private AbstractHandler getAIHandler(MainPanel mainPanel) {
-        Class<?> AIPanel = mainPanel.getAIPanel();
-        Project project = mainPanel.getProject();
-        AbstractHandler AIHandler = null;
-        if (AIPanel.equals(CFAISettingPanel.class)) {
-            AIHandler = project.getService(CloudflareAIHandler.class);
-        } else if (AIPanel.equals(GoogleAISettingPanel.class)) {
-            AIHandler = project.getService(GoogleAIHandler.class);
-        } else if (AIPanel.equals(GroqAISettingPanel.class)) {
-            AIHandler = project.getService(GroqAIHandler.class);
-        }
-        return AIHandler;
-    }
-
     public void doActionPerformed(MainPanel mainPanel, String content, JsonArray attachments) {
-        if (!presetCheck()) {
+        if (!presetCheck(mainPanel)) {
             return;
         }
         if (!currentModelCheck(mainPanel)) {
@@ -119,28 +89,56 @@ public class SendAction extends AnAction {
 
         MessageGroupComponent contentPanel = mainPanel.getContentPanel();
         JsonObject messageMy = contentPanel.MyInfo.deepCopy();
-        JsonObject messageAi =  contentPanel.AIInfo.deepCopy();
+        JsonObject messageAi = contentPanel.AIInfo.deepCopy();
 
-        messageMy.addProperty("chatId", GeneratorUtil.generateWithUUID());
-        messageMy.addProperty("time",GeneratorUtil.getTimestamp());
+        String collId = contentPanel.getChatCollection().get("id").getAsString();
+        String fromLLM = contentPanel.getAISetInfo().get("aiModel").getAsString();
+        String fromProvider = mainPanel.getAIKey().toLowerCase();
+        boolean webSearch = contentPanel.getAISetInfo().get("online").getAsBoolean();
+
+        String chatId = GeneratorUtil.generateWithUUID();
+
+        messageMy.addProperty("id", chatId);
+        messageMy.addProperty("collId", collId);
+        messageMy.addProperty("createAt",GeneratorUtil.getTimestamp());
+        messageMy.addProperty("updateAt",GeneratorUtil.getTimestamp());
         messageMy.addProperty("content",content);
+        messageMy.addProperty("fromLLM",fromLLM);
+        messageMy.addProperty("fromProvider",fromProvider);
+        messageMy.addProperty("webSearch",webSearch);
 
         if (!isRerun) {
-            messageMy.add("attachments",contentPanel.getUploadList()); // 重发也不添加上传附件
+            // 写入一些额外信息
+            JsonArray newAttachments = new JsonArray();
+            for (JsonElement attachment: contentPanel.getUploadList()) {
+                JsonObject attach = attachment.getAsJsonObject();
+                attach.addProperty("id",GeneratorUtil.generateWithUUID());
+                attach.addProperty("createAt",GeneratorUtil.getTimestamp());
+                attach.addProperty("updateAt",GeneratorUtil.getTimestamp());
+                attach.addProperty("chatId",chatId);
+                attach.addProperty("collId",collId);
+                newAttachments.add(attach);
+            }
+            messageMy.add("attachments",newAttachments); // 重发也不添加上传附件
             contentPanel.removeUploadList(); // 重发不清空上传附件，否则清空
         }else {
             messageMy.add("attachments",attachments);
         }
         
         MessageComponent messageMyComponent = contentPanel.add(messageMy);
-        messageMyComponent.messageActions.setDisabledRerunAndTrash(true); // 禁用按钮
+        messageMyComponent.messageActions.setDisabledRerun(true); // 禁用按钮
 
-        messageAi.addProperty("chatId", GeneratorUtil.generateWithUUID());
-        messageAi.addProperty("time",GeneratorUtil.getTimestamp());
+        messageAi.addProperty("id", GeneratorUtil.generateWithUUID());
+        messageAi.addProperty("collId", collId);
+        messageAi.addProperty("createAt",GeneratorUtil.getTimestamp());
+        messageAi.addProperty("updateAt",GeneratorUtil.getTimestamp());
+        messageAi.addProperty("fromLLM",fromLLM);
+        messageAi.addProperty("fromProvider",fromProvider);
+        messageAi.addProperty("webSearch",webSearch);
+
         MessageComponent messageAIComponent = contentPanel.add(messageAi);
         messageAIComponent.messageActions.setDisabled(true); // 禁用按钮
 
-        AbstractHandler AIHandler = getAIHandler(mainPanel);
         MessageComponent AIAnswer = contentPanel.getLastItem(null);
         try {
             ExecutorService executorService = mainPanel.getExecutorService();

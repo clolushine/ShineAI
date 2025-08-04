@@ -34,7 +34,7 @@ public class RequestProvider {
 
         provider.url = baseUrl + url;
         provider.header = TokenManager.getInstance().getShineAIHeaders();
-        provider.data = OfficialBuilder.buildShineAI(messageMy,mainPanel.getContentPanel());
+        provider.data = OfficialBuilder.buildShineAI(messageMy,mainPanel.getContentPanel(),mainPanel.getPromptsPanel());
 
         return provider;
     }

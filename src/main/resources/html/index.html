@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>AI 聊天界面</title>
+    <!-- 引用 CSS 文件，相对路径 -->
+    <link rel="stylesheet" href="css/darcula.min.css">
+    <!-- 引用 highlight.js 的样式 -->
+    <script src="js/highlight.min.js"></script>
+    <script src="js/markdown-it.min.js"></script>
+    <style>
+        /* 确保 body 占满 HTML 高度，并且在其内部可滚动 */
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100%; /* 占满父容器（HTML）的高度 */
+            overflow-y: auto; /* 当内容超出时，垂直方向显示滚动条 */
+            display: flex; /* 使用 flex 布局，确保内部元素能正确填充 */
+            flex-direction: column; /* 垂直方向排列 */
+        }
+        /* 主内容显示区域的样式 */
+        #markdown-content-display {
+            padding: 10px;
+            color: #000000; /* 默认字体颜色，根据主题调整 */
+            border-radius: 8px;
+            background: #ffffff; /* 默认背景色，根据主题调整 */
+            flex-grow: 1; /* 让此 div 填充剩余空间 */
+            min-height: 0; /* 允许此 div 缩小到其内容的首选大小时 */
+            overflow-y: auto; /* 如果内容过多，在此 div 内部显示滚动条 */
+            white-space: pre-wrap; /* 允许文本在遇到空白符时换行 */
+            word-wrap: break-word; /* 允许长单词或URL在任意处断开 */
+        }
+    </style>
+</head>
+<body>
+    <!-- 这个Div用于显示渲染后的Markdown内容 -->
+    <div id="markdown-content-display"></div>
+
+    <!-- 原始Markdown内容将通过Java/Kotlin代码注入到这个script标签中 -->
+    <!-- type="text/plain" 表示浏览器不会将它作为可执行JS解析 -->
+    <script id="raw-markdown-input" type="text/plain"><!-- MARKDOWN_PLACEHOLDER --></script>
+
+    <script>
+
+        // 获取原始的Markdown文本
+        const rawMarkdown = document.getElementById('raw-markdown-input').textContent;
+        const markdownDisplay = document.getElementById('markdown-content-display');
+
+        // 初始化 MarkdownIt库
+        const md = markdownit({
+          // 在源码中启用 HTML 标签
+          html: false,
+          breaks: true,
+          typographer: true,
+          linkify: true, // 将类似 URL 的文本自动转换为链接。
+          xhtmlOut: true, // 使用 '/' 来闭合单标签 （比如 <br />）。
+          langPrefix: 'language-', // 给围栏代码块的 CSS 语言前缀。对于额外的高亮代码非常有用。
+          // 启用一些语言中立的替换 + 引号美化
+          // 双 + 单引号替换对，当 typographer 启用时。
+          // 或者智能引号等，可以是 String 或 Array。
+          // 比方说，你可以支持 '«»„“' 给俄罗斯人使用， '„“‚‘'  给德国人使用。
+          // 还有 ['«\xA0', '\xA0»', '‹\xA0', '\xA0›'] 给法国人使用（包括 nbsp）。
+          quotes: '“”‘’',
+          highlight: (str, lang) => {
+            // 经过highlight.js处理后的html
+            let preCode = ''
+            try {
+              preCode = hljs.highlightAuto(str).value
+            } catch (err) {
+              preCode = md.utils.escapeHtml(str)
+            }
+            let html = preCode
+            html = '<div style="padding: 0 2px;">' + html + '</div>'
+            let htmlCode = `<div style="background:#0d1117;margin-top: 5px;color: #888;padding:5px 0;border-radius: 5px;">`
+            htmlCode += `<pre class="hljs" style="padding:0 8px;margin-bottom:5px;overflow: auto;display: block;border-radius: 5px;"><code>${html}</code></pre>`
+            htmlCode += '</div>'
+            return htmlCode
+          },
+        })
+
+         // 渲染Markdown并插入到页面中
+        markdownDisplay.innerHTML = md.render(rawMarkdown);
+    </script>
+</body>
+</html>

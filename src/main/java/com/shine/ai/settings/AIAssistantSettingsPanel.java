@@ -11,7 +11,6 @@ import com.intellij.openapi.ui.MessageType;
 
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.ui.TitledSeparator;
-import com.intellij.ui.components.JBTextField;
 import com.intellij.ui.components.labels.LinkLabel;
 import com.intellij.util.messages.MessageBusConnection;
 import com.intellij.util.ui.JBUI;
@@ -25,8 +24,6 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.*;
@@ -39,7 +36,7 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
     private MessageBusConnection connection;
 
     private JPanel myMainPanel;
-    private JBTextField requestTimeoutField;
+    private JSpinner requestTimeoutField;
     private JLabel requestTimeoutHelpLabel;
     private JPanel requestTitledBorderBox;
     private JComboBox<String> firstCombobox;
@@ -47,6 +44,7 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
     private JComboBox<String> thirdCombobox;
     private JCheckBox enableLineWarpCheckBox;
     private JCheckBox enableAvatarCheckBox;
+    private JCheckBox enableAIInfoCheckBox;
     private JPanel contentTitledBorderBox;
     private JLabel contentOrderHelpLabel;
     private JPanel userOptions;
@@ -67,7 +65,6 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
     private JSpinner dialogFontSizeSpinner;
     private JPanel signPanel;
     private JComboBox<String> PromptsPosComboBox;
-    private JCheckBox enableParserCodeCheckBox;
     private JLabel cacheUsedInfoStringField;
 
     private LoadingButton logoutButton;
@@ -75,9 +72,13 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
     private LinkLabel<String> signLink;
 
     private final String[] comboboxItemsString = {
-            CLOUDFLARE_AI_CONTENT_NAME,
+            OpenAI_CONTENT_NAME,
             Google_AI_CONTENT_NAME,
-            GROQ_AI_CONTENT_NAME};
+            Anthropic_AI_CONTENT_NAME,
+            CLOUDFLARE_AI_CONTENT_NAME,
+            GROQ_AI_CONTENT_NAME,
+            OpenRouter_AI_CONTENT_NAME
+    };
 
     private final Map<Integer,String> promptsComboBoxItemsPos = new HashMap<>(){{
         put(0,"left");
@@ -96,7 +97,8 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
     }
 
     private void init() {
-        requestTimeoutField.getEmptyText().setText(MsgEntryBundle.message("ui.setting.server.request_timeout.empty_text"));
+        SpinnerNumberModel requestTimeoutModel = new SpinnerNumberModel(60000, 5000, 60000, 1000);
+        requestTimeoutField.setModel(requestTimeoutModel);
 
         firstCombobox.setModel(new DefaultComboBoxModel<>(comboboxItemsString));
         secondCombobox.setModel(new DefaultComboBoxModel<>(comboboxItemsString));
@@ -165,15 +167,6 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
                         });
             }
         });
-
-        enableParserCodeCheckBox.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (enableParserCodeCheckBox.isSelected()) {
-                    BalloonUtil.showBalloon("Enabling it may cause performance issues, such as lag or stuttering.", MessageType.WARNING, enableParserCodeCheckBox);
-                }
-            }
-        });
     }
 
     private String checkTokenExists() {
@@ -187,7 +180,7 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
     public void reset() {
         AIAssistantSettingsState state = AIAssistantSettingsState.getInstance();
 
-        requestTimeoutField.setText(state.requestTimeout);
+        requestTimeoutField.setValue(state.requestTimeout);
 
         firstCombobox.setSelectedItem(state.contentOrder.get(1));
         secondCombobox.setSelectedItem(state.contentOrder.get(2));
@@ -199,7 +192,7 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
 
         enableLineWarpCheckBox.setSelected(state.enableLineWarp);
         enableAvatarCheckBox.setSelected(state.enableAvatar);
-        enableParserCodeCheckBox.setSelected(state.enableParserCode);
+        enableAIInfoCheckBox.setSelected(state.enableMsgPanelAIInfo);
 
         UseremailField.setText(state.Useremail);
 
@@ -225,30 +218,25 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
                 promptsComboBoxItemsPos.get(state.promptsPos) != PromptsPosComboBox.getSelectedItem() ||
                 !state.enableAvatar == enableAvatarCheckBox.isSelected() ||
                 !state.enableLineWarp == enableLineWarpCheckBox.isSelected() ||
-                !state.enableParserCode == enableParserCodeCheckBox.isSelected()
+                !state.enableMsgPanelAIInfo == enableAIInfoCheckBox.isSelected()
         ;
 
-        return
-                !StringUtil.equals(state.requestTimeout, requestTimeoutField.getText()) ||
-                        promptsComboBoxItemsPos.get(state.promptsPos) != PromptsPosComboBox.getSelectedItem() ||
-                        !state.enableAvatar == enableAvatarCheckBox.isSelected() ||
-                        !state.enableLineWarp == enableLineWarpCheckBox.isSelected() ||
-                        !state.enableParserCode == enableParserCodeCheckBox.isSelected() ||
-                        state.CHAT_PANEL_FONT_SIZE != (int) dialogFontSizeSpinner.getValue() ||
-                        !StringUtil.equals(state.Useremail, UseremailField.getText()) ||
-                        !StringUtil.equals(state.contentOrder.get(1), (String)firstCombobox.getSelectedItem()) ||
-                        !StringUtil.equals(state.contentOrder.get(2), (String)secondCombobox.getSelectedItem()) ||
-                        !StringUtil.equals(state.contentOrder.get(3), (String)thirdCombobox.getSelectedItem())
-                ;
+        return !Objects.equals(state.requestTimeout, requestTimeoutField.getValue()) ||
+                promptsComboBoxItemsPos.get(state.promptsPos) != PromptsPosComboBox.getSelectedItem() ||
+                !state.enableAvatar == enableAvatarCheckBox.isSelected() ||
+                !state.enableLineWarp == enableLineWarpCheckBox.isSelected() ||
+                !state.enableMsgPanelAIInfo == enableAIInfoCheckBox.isSelected() ||
+                state.CHAT_PANEL_FONT_SIZE != (int) dialogFontSizeSpinner.getValue() ||
+                !StringUtil.equals(state.contentOrder.get(1), (String)firstCombobox.getSelectedItem()) ||
+                !StringUtil.equals(state.contentOrder.get(2), (String)secondCombobox.getSelectedItem()) ||
+                !StringUtil.equals(state.contentOrder.get(3), (String)thirdCombobox.getSelectedItem());
     }
 
     @Override
     public void apply() {
         AIAssistantSettingsState state = AIAssistantSettingsState.getInstance();
 
-        boolean requestTimeoutIsNumber = com.shine.ai.util.StringUtil.isNumber(requestTimeoutField.getText());
-
-        state.requestTimeout = !requestTimeoutIsNumber ? "60000" : requestTimeoutField.getText();
+        state.requestTimeout = (Integer) requestTimeoutField.getValue();
 
         Integer promptsPosItem = promptsComboBoxItemsPos.entrySet()
                 .stream()
@@ -261,7 +249,7 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
         state.promptsPos =  promptsPosItem;
         state.enableLineWarp = enableLineWarpCheckBox.isSelected();
         state.enableAvatar = enableAvatarCheckBox.isSelected();
-        state.enableParserCode = enableParserCodeCheckBox.isSelected();
+        state.enableMsgPanelAIInfo = enableAIInfoCheckBox.isSelected();
 
         state.Useremail = UseremailField.getText();
 
@@ -334,7 +322,7 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
         contentTitledBorderBox.add(tsUrl,BorderLayout.CENTER);
 
         storageTitledBorderBox = new JPanel(new BorderLayout());
-        TitledSeparator sgBt = new TitledSeparator("Storage Info");
+        TitledSeparator sgBt = new TitledSeparator("Storage Used Info");
         storageTitledBorderBox.add(sgBt,BorderLayout.CENTER);
 
         loginTitledBorderBox = new JPanel(new BorderLayout());
@@ -395,12 +383,13 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
 
     public void updateStorageUsedInfo() {
         AIAssistantSettingsState state = AIAssistantSettingsState.getInstance();
-        assert storageUsedInfoField != null;
-        int percentage = state.getStorageUsagePercentage();
-        storageUsedInfoField.setValue(percentage);
-        Color storageUsedInfoStringColor = Color.decode(percentage <= 20 ? "#4ddd87" : percentage <= 80 ? "#10AEFF" : "#ff0000");
-        storageUsedInfoStringField.setForeground(storageUsedInfoStringColor);
-        storageUsedInfoStringField.setText(percentage + "%");
+//        assert storageUsedInfoField != null;
+//        int percentage = state.getStorageUsagePercentage();
+//        storageUsedInfoField.setValue(percentage);
+//        Color storageUsedInfoStringColor = Color.decode(percentage <= 20 ? "#4ddd87" : percentage <= 80 ? "#10AEFF" : "#ff0000");
+//        storageUsedInfoStringField.setForeground(storageUsedInfoStringColor);
+//        storageUsedInfoStringField.setText(percentage + "%");
+        assert storageUsedMBField != null;
         storageUsedMBField.setText(state.getStorageUsageMBInfo());
     }
 

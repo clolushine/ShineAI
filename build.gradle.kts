@@ -12,6 +12,8 @@ plugins {
     id("org.jetbrains.kotlin.jvm") version "2.0.0"
     // Gradle IntelliJ Plugin
     id("org.jetbrains.intellij") version "1.17.4"
+    // javafx
+//    id("org.openjfx.javafxplugin") version "0.1.0"
 }
 
 group = properties("pluginGroup")
@@ -27,6 +29,11 @@ repositories {
     gradlePluginPortal()
 }
 
+// javafx {
+//     version = "21.0.8"
+//     modules = listOf("javafx.controls","javafx.web","javafx.swing")
+// }
+
 var graalVMVersion: String = "23.1.5";
 
 dependencies {
@@ -37,6 +44,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp-sse:4.10.0")
     implementation("com.vladsch.flexmark:flexmark-all:0.62.2")
     implementation("net.coobird:thumbnailator:0.4.8")
+    implementation("org.xerial:sqlite-jdbc:3.45.1.0")
 //    implementation("cn.hutool:hutool-json:5.8.30")
 //    implementation("com.fifesoft:rsyntaxtextarea:3.5.1")
 //    implementation("org.graalvm.polyglot:polyglot:${graalVMVersion}")

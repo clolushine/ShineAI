@@ -1,7 +1,9 @@
 package com.shine.ai.ui;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.intellij.openapi.project.Project;
+import com.intellij.openapi.Disposable;
 import com.intellij.openapi.ui.NullableComponent;
 import com.intellij.ui.Gray;
 import com.intellij.ui.JBColor;
@@ -11,11 +13,8 @@ import com.intellij.util.ui.JBUI;
 import com.intellij.util.ui.UIUtil;
 import com.shine.ai.icons.AIAssistantIcons;
 import com.shine.ai.settings.AIAssistantSettingsState;
-import com.shine.ai.settings.CFAISettingPanel;
-import com.shine.ai.settings.GoogleAISettingPanel;
-import com.shine.ai.settings.GroqAISettingPanel;
+import com.shine.ai.util.JsonUtil;
 import com.shine.ai.util.StringUtil;
-import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
 import javax.swing.border.Border;
@@ -24,27 +23,22 @@ import java.awt.event.*;
 import java.util.*;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
-public class PromptGroupComponent extends JBPanel<PromptGroupComponent> implements NullableComponent {
+public class PromptGroupComponent extends JBPanel<PromptGroupComponent> implements NullableComponent, Disposable {
     private final JLabel listCountsLabel;
 
     private final JPanel myList = new JPanel(new VerticalLayout(JBUI.scale(10)));
-    private final MyScrollPane myScrollPane = new MyScrollPane(myList, ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
-            ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-    private int myScrollValue = 0;
+    private final MyScrollPane myScrollPane = new MyScrollPane(myList, ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 
     private final AIAssistantSettingsState stateStore = AIAssistantSettingsState.getInstance();
 
     public List<JsonObject> promptList = new ArrayList<>();
     public Boolean enablePrompts;
 
-    private final Project ThisProject;
-    private final MainPanel ThisMainPanel;
-    private final Class<?> AIVendorSet;
-    public PromptGroupComponent(@NotNull Project project,Class<?> settingPanel,MainPanel mainP) {
-        ThisProject = project;
+    public MainPanel ThisMainPanel;
+    public PromptGroupComponent(MainPanel mainP) {
         ThisMainPanel = mainP;
-        AIVendorSet = settingPanel;
 
         setLayout(new BorderLayout());
         setOpaque(true);
@@ -65,7 +59,7 @@ public class PromptGroupComponent extends JBPanel<PromptGroupComponent> implemen
         Border compoundBorder = BorderFactory.createCompoundBorder(infoTopOuterBorder,infoTopInnerBorder);
         listCountsLabel.setBorder(compoundBorder);
         listCountsLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        listCountsLabel.setForeground(JBColor.namedColor("Label.infoForeground", new JBColor(Gray.x80, Gray.x8C)));
+        listCountsLabel.setForeground(new JBColor(Gray.x80, Gray.x8C));
         listCountsLabel.setFont(JBUI.Fonts.create(null,13));
         mainPanel.add(listCountsLabel,BorderLayout.NORTH);
 
@@ -73,18 +67,6 @@ public class PromptGroupComponent extends JBPanel<PromptGroupComponent> implemen
 
         myScrollPane.setBorder(JBUI.Borders.empty());
         mainPanel.add(myScrollPane,BorderLayout.CENTER);
-
-        myScrollPane.getVerticalScrollBar().setAutoscrolls(true);
-        myScrollPane.getVerticalScrollBar().addAdjustmentListener(e -> {
-            int value = e.getValue();
-            if (myScrollValue == 0 && value > 0 || myScrollValue > 0 && value == 0) {
-                myScrollValue = value;
-                repaint();
-            }
-            else {
-                myScrollValue = value;
-            }
-        });
 
         myList.addContainerListener(new ContainerListener() {
             @Override
@@ -101,12 +83,9 @@ public class PromptGroupComponent extends JBPanel<PromptGroupComponent> implemen
 
     public void init() {
         initPromptList();
-        refreshListCounts();
     }
 
     public void refreshStatus() {
-        removeList();
-        initPromptList();
         refreshListCounts();
     }
 
@@ -115,9 +94,9 @@ public class PromptGroupComponent extends JBPanel<PromptGroupComponent> implemen
 
         String content = cPrompt.get("content").getAsString();
         String role = cPrompt.get("role").getAsString();
-        String chatId = cPrompt.get("chatId").getAsString();
+        String chatId = cPrompt.get("id").getAsString();
 
-        cPrompt.remove("chatId");
+        cPrompt.remove("id");
         cPrompt.addProperty("promptId",chatId);
         cPrompt.addProperty("icon", StringUtil.equals(role, "user") ?  AIAssistantIcons.ME_PATH : AIAssistantIcons.AI_PATH);
         cPrompt.addProperty("name", role);
@@ -125,29 +104,56 @@ public class PromptGroupComponent extends JBPanel<PromptGroupComponent> implemen
         cPrompt.addProperty("status", 1);
         cPrompt.addProperty("time", 0);
         cPrompt.addProperty("isPin", false);
-        cPrompt.addProperty("withContent", content.isBlank() ? "无效提示词" : "预设提示词"); // 把进行时状态改成1
+        cPrompt.addProperty("withContent", content.isBlank() ? "invalid prompt" : "preset prompt"); // 把进行时状态改成1
+        cPrompt.addProperty("enable",true);
 
         promptList.add(cPrompt);
-        PromptComponent messageComponentItem = new PromptComponent(ThisProject,cPrompt,null);
+        // 这里需要写入state
+        stateStore.setAISettingInfoByKey(ThisMainPanel.getPanelName(),"prompts", JsonUtil.getJsonArray(promptList));
+        PromptComponent messageComponentItem = new PromptComponent(cPrompt);
         myList.add(messageComponentItem);
+
         updateLayout();
-        updateUI();
     }
 
     public void refreshListCounts() {
-        if (enablePrompts && stateStore.promptsPos != 2) {
-            listCountsLabel.setText("total：" + promptList.size() + " prompts");
-            listCountsLabel.setForeground(JBColor.namedColor("Label.infoForeground", new JBColor(Color.decode("#ee9e26"), Color.decode("#ee9e26"))));
-            setVisible(true);
-            myList.setVisible(true);
-        }else {
-            setVisible(false);
-            myList.setVisible(false);
-        }
+        JsonObject settingInfo = stateStore.getAISettingInfo(ThisMainPanel.getPanelName());
+
+        enablePrompts = settingInfo.get("promptsCutIn").getAsBoolean();
+
+        listCountsLabel.setText("total：" + myList.getComponentCount() + " prompts");
+
+        setVisible(enablePrompts);
+
+        myList.setVisible(enablePrompts);
     }
 
-    public void delete(String chatId,JComponent component) {
+    public void updatePrompt(JsonObject promptItem) {
+        String updateId = promptItem.get("promptId").getAsString();
+
+        int updateIdx = IntStream.range(0, promptList.size())
+                .filter(i -> StringUtil.equals(promptList.get(i).get("promptId").getAsString(), updateId))
+                .findFirst()
+                .orElse(-1);
+
+        if (updateIdx >= 0) {
+            promptList.set(updateIdx,promptItem);
+        }
+
+        // 这里需要写入state
+        stateStore.setAISettingInfoByKey(ThisMainPanel.getPanelName(),"prompts", JsonUtil.getJsonArray(promptList));
+
+        removeList();
+
+        initPromptList();
+
+        updateLayout();
+    }
+
+    public void delete(String chatId) {
         promptList.removeIf(it -> StringUtil.equals(it.get("promptId").getAsString(),chatId));
+        // 这里需要写入state
+        stateStore.setAISettingInfoByKey(ThisMainPanel.getPanelName(),"prompts", JsonUtil.getJsonArray(promptList));
         for (Component comp : myList.getComponents()) {
             if (comp instanceof PromptComponent messageItem) {
                 if (StringUtil.equals(messageItem.chatId, chatId)) {
@@ -156,7 +162,6 @@ public class PromptGroupComponent extends JBPanel<PromptGroupComponent> implemen
             }
         }
         updateLayout();
-        updateUI();
     }
 
     public void removeList() {
@@ -165,6 +170,10 @@ public class PromptGroupComponent extends JBPanel<PromptGroupComponent> implemen
 
     public void openPromptList() {
         for (JsonObject chatItem : promptList) {
+            if (!(chatItem.has("enable") && chatItem.get("enable").getAsBoolean())) {
+                continue;
+            }
+
             String content = chatItem.get("content").getAsString();
             String role = chatItem.get("role").getAsString();
 
@@ -174,55 +183,35 @@ public class PromptGroupComponent extends JBPanel<PromptGroupComponent> implemen
             chatItem.addProperty("status", 1);
             chatItem.addProperty("time", 0);
             chatItem.addProperty("isPin", false);
-            chatItem.addProperty("withContent", content.isBlank() ? "无效提示词" : "预设提示词"); // 把进行时状态改成1
-            PromptComponent promptComponentItem = new PromptComponent(ThisProject,chatItem,null);
+            chatItem.addProperty("withContent", content.isBlank() ? "invalid prompt" : "preset prompt"); // 把进行时状态改成1
+            PromptComponent promptComponentItem = new PromptComponent(chatItem);
 
             myList.add(promptComponentItem);
         }
+
+        refreshListCounts();
+
         updateLayout();
-        updateUI();
     }
 
 
     public void initPromptList() {
-        List<String> prompts = new ArrayList<>();
-        if (AIVendorSet.equals(CFAISettingPanel.class)) {
-            enablePrompts = stateStore.CFEnablePrompts;
-            prompts = stateStore.CFPrompts;
-        } else if (AIVendorSet.equals(GoogleAISettingPanel.class)) {
-            enablePrompts = stateStore.GOEnablePrompts;
-            prompts = stateStore.GOPrompts;
-        } else if (AIVendorSet.equals(GroqAISettingPanel.class)) {
-            enablePrompts = stateStore.GREnablePrompts;
-            prompts = stateStore.GRPrompts;
+        JsonObject settingInfo = stateStore.getAISettingInfo(ThisMainPanel.getPanelName());
+
+        if (!settingInfo.isJsonNull()) {
+            JsonArray prompts = settingInfo.get("prompts").getAsJsonArray();
+            promptList = prompts.asList().stream()
+                    .filter(JsonElement::isJsonObject)   // 过滤出所有是 JsonObject 的元素
+                    .map(JsonElement::getAsJsonObject)   // 将这些元素强制转换为 JsonObject
+                    .collect(Collectors.toList());
         }
-        promptList = prompts.stream()
-                .map(stateStore::getJsonObject)
-                .collect(Collectors.toList());
+
         openPromptList();
     }
 
     public void updateLayout() {
-        LayoutManager layout = myList.getLayout();
-        int componentCount = myList.getComponentCount();
-        for (int i = 0 ; i< componentCount ; i++) {
-            layout.removeLayoutComponent(myList.getComponent(i));
-            layout.addLayoutComponent(null,myList.getComponent(i));
-        }
         myList.revalidate();
         myList.repaint();
-        myScrollPane.revalidate();
-        myScrollPane.repaint();  // 确保ScrollPane也重新验证布局和重绘
-    }
-
-    @Override
-    protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
-        if (myScrollValue > 0) {
-            g.setColor(JBColor.border());
-            int y = myScrollPane.getY() - 1;
-            g.drawLine(0, y, getWidth(), y);
-        }
     }
 
     @Override
@@ -230,14 +219,24 @@ public class PromptGroupComponent extends JBPanel<PromptGroupComponent> implemen
         return !isVisible();
     }
 
-    static class MyAdjustmentListener implements AdjustmentListener {
+    public List<JsonObject> getPromptList() {
+        return promptList;
+    }
 
-        @Override
-        public void adjustmentValueChanged(AdjustmentEvent e) {
-            JScrollBar source = (JScrollBar) e.getSource();
-            if (!source.getValueIsAdjusting()) {
-                source.setValue(source.getMaximum());
+    public JsonArray getEnabledPromptList() {
+        JsonArray prompts = new JsonArray();
+        for (JsonObject prompt: promptList) {
+            if (prompt.has("enable") && prompt.get("enable").getAsBoolean()) {
+                prompts.add(prompt);
             }
         }
+        return prompts;
+    }
+
+    @Override
+    public void dispose() {
+        removeList();
+
+        ThisMainPanel = null;
     }
 }

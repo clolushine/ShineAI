@@ -3,6 +3,7 @@ package com.shine.ai.ui;
 import com.intellij.ui.components.IconLabelButton;
 import com.intellij.util.ui.ImageUtil;
 import com.intellij.util.ui.JBUI;
+import com.intellij.util.ui.UIUtil;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
@@ -67,6 +68,35 @@ public class IconButton extends JPanel {
     public void setIcon(Icon icon) {
         buttonIcon = icon;
         button.setIcon(buttonIcon);
+    }
+
+    public void setToolTipText(String text) {
+        // 约定：用 \n 分隔内容和快捷键
+        String[] parts = text.split("\n", 2);
+        String mainText = parts[0];
+        String shortcutText = (parts.length > 1) ? parts[1] : null;
+
+        // 1. 从主题获取颜色
+        Color mainColor = UIManager.getColor("ToolTip.foreground");     // 主文本颜色
+        Color shortcutColor = UIManager.getColor("Label.disabledForeground"); // 快捷键灰色
+
+        String mainColorHex = UIUtil.colorToHex(mainColor);
+        String shortcutColorHex = UIUtil.colorToHex(shortcutColor);
+
+        // 2. 构建HTML
+        String toolTipHtml;
+        if (shortcutText != null) {
+            // 同时包含主内容和快捷键，用&nbsp;隔开
+            toolTipHtml = String.format(
+                    "<html><b style='color:%s'>%s</b>&nbsp;&nbsp;<span style='color:%s'>%s</span></html>",
+                    mainColorHex, mainText, shortcutColorHex, shortcutText
+            );
+        } else {
+            // 仅主内容
+            toolTipHtml = String.format("<html><b style='color:%s'>%s</b></html>", mainColorHex, mainText);
+        }
+
+        button.setToolTipText(toolTipHtml);
     }
 
     public void setText(String text) {

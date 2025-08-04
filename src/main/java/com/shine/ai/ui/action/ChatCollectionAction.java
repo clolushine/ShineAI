@@ -2,14 +2,14 @@ package com.shine.ai.ui.action;
 
 import com.intellij.icons.AllIcons;
 import com.intellij.openapi.actionSystem.ActionUpdateThread;
+import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
-import com.intellij.openapi.project.DumbAwareAction;
 import com.shine.ai.settings.ChatCollectionDialog;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
 
-public class ChatCollectionAction extends DumbAwareAction {
+public class ChatCollectionAction extends AnAction {
     private final JComponent component;
 
     private boolean enabled = true;
@@ -25,16 +25,20 @@ public class ChatCollectionAction extends DumbAwareAction {
 
     @Override
     public void update(@NotNull AnActionEvent e) {
-        e.getPresentation().setEnabled(this.enabled);
+        // 这里不禁用状态了，toolwindow的刷新机制导致会有问题
+         e.getPresentation().setEnabled(this.enabled);
     }
 
     @Override
     public @NotNull ActionUpdateThread getActionUpdateThread() {
-        return ActionUpdateThread.BGT;
+        // 确保 update 方法在 EDT 上执行，这样 UI 更新是即时的。
+        return ActionUpdateThread.EDT;
     }
 
     @Override
     public void actionPerformed(@NotNull AnActionEvent e) {
-        new ChatCollectionDialog(e.getProject()).openDialog(component);
+        if (enabled) {
+            new ChatCollectionDialog(e.getProject()).openDialog(component);
+        }
     }
 }

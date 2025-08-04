@@ -13,7 +13,6 @@ import com.shine.ai.message.MsgEntryBundle;
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import javax.swing.plaf.basic.BasicTextAreaUI;
 import java.awt.*;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
@@ -21,11 +20,13 @@ import java.awt.event.ActionEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MultilineInput extends JPanel {
     private final JBTextArea textArea;
     private final JButton clearButton;
-    private final int MAX_HEIGHT = 128;
+    private final int MAX_HEIGHT = 256;
     private final int INITIAL_HEIGHT = 32;
     private final JScrollPane scrollPane;
     private final MainPanel mainPanel;
@@ -39,13 +40,15 @@ public class MultilineInput extends JPanel {
         // 放在setting中设置
 //        textArea.setLineWrap(true); // 自动换行
 //        textArea.setWrapStyleWord(true); // 单词边界换行
-        textArea.setBorder(JBUI.Borders.empty(4,4,4,12));
+        textArea.setBorder(JBUI.Borders.empty(4,6,4,12));
 
         textArea.setTransferHandler(new ImageAwareTransferHandler());
 
         // 限制最大高度，超过则显示滚动条
         scrollPane = new JBScrollPane(textArea);
         scrollPane.setBorder(null);
+        scrollPane.setPreferredSize(new Dimension(getWidth(), INITIAL_HEIGHT));
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
 
         add(scrollPane, BorderLayout.CENTER);
@@ -64,13 +67,6 @@ public class MultilineInput extends JPanel {
         });
 
         clearButton.setVisible(false);
-
-        textArea.setUI(new BasicTextAreaUI() {
-            @Override
-            public void paintBackground(Graphics g) {
-                super.paintBackground(g);
-            }
-        });
 
         add(clearButton, BorderLayout.EAST);
 
@@ -105,6 +101,7 @@ public class MultilineInput extends JPanel {
         KeyStroke ctrlEnter = KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, InputEvent.CTRL_DOWN_MASK);
         inputMap.put(shiftEnter, "insert-break");  // 使用 "insert-break" action
         inputMap.put(ctrlEnter, "send-action");  // 使用 "send-action" action
+
         actionMap.put("insert-break", new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -117,6 +114,9 @@ public class MultilineInput extends JPanel {
             public void actionPerformed(ActionEvent e) {
                 String content = textArea.getText();
                 if (content == null || content.isBlank()) {
+                    return;
+                }
+                if (!mainPanel.getButton().isEnabled()) {
                     return;
                 }
                 SendAction sendAction = mainPanel.getProject().getService(SendAction.class);
@@ -139,19 +139,32 @@ public class MultilineInput extends JPanel {
         this.textArea.setText(str);
     }
 
+    public void clearBorder() {
+        scrollPane.setBorder(null);
+        clearButton.setBorder(null);
+        revalidate(); // 重新验证布局
+        repaint(); // 重绘组件
+    }
+
     public JBTextArea getTextarea() {
         return this.textArea;
     }
 
     private void adjustHeight() {
         int preferredHeight = textArea.getPreferredSize().height;
-        int newHeight = Math.min(preferredHeight, MAX_HEIGHT);
-        // 避免不必要的重绘
+        // 这里可以加上初始高度的判断，确保不会比初始值小
+        int newHeight = Math.max(INITIAL_HEIGHT, Math.min(preferredHeight, MAX_HEIGHT));
+        // 只有在高度确实需要变化时才执行后续操作
         if (scrollPane.getPreferredSize().height != newHeight) {
             scrollPane.setPreferredSize(new Dimension(scrollPane.getPreferredSize().width, newHeight));
-            setMinimumSize(new Dimension(getPreferredSize().width,newHeight));
-            revalidate(); // 重新验证布局
-            repaint(); // 重绘组件
+            // revalidate()会触发布局更新，这个更新是异步的。
+            // 我们需要在布局更新完成后，再执行滚动操作。
+            revalidate();
+            // 使用 SwingUtilities.invokeLater 来确保滚动操作在布局管理器完成工作后执行。
+            SwingUtilities.invokeLater(() -> {
+                // 请求将当前组件（MultilineInput 面板）的整个区域滚动到可见范围
+                this.scrollRectToVisible(this.getBounds());
+            });
         }
     }
 
@@ -169,12 +182,13 @@ public class MultilineInput extends JPanel {
         }
     }
 
-    public Image pasteFromClipboardImage() {
-        Image image = null;
+    public List<BufferedImage> pasteFromClipboardImage() {
+        List<BufferedImage> imageList = new ArrayList<>();
         Transferable transferable = Toolkit.getDefaultToolkit().getSystemClipboard().getContents(null);
         if (transferable != null && transferable.isDataFlavorSupported(DataFlavor.imageFlavor)) {
             try {
-                image = (BufferedImage) transferable.getTransferData(DataFlavor.imageFlavor);
+               BufferedImage image = (BufferedImage) transferable.getTransferData(DataFlavor.imageFlavor);
+                imageList.add(image);
             } catch (Exception ex) {
                 Notifications.Bus.notify(
                         new Notification(MsgEntryBundle.message("group.id"),
@@ -183,6 +197,6 @@ public class MultilineInput extends JPanel {
                                 NotificationType.ERROR));
             }
         }
-        return image;
+        return imageList;
     }
 }

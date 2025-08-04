@@ -1,5 +1,6 @@
 package com.shine.ai.ui;
 
+import com.google.gson.JsonObject;
 import com.intellij.icons.AllIcons;
 import com.intellij.openapi.util.IconLoader;
 import com.intellij.util.ImageLoader;
@@ -10,6 +11,10 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+
+import static com.shine.ai.MyToolWindowFactory.previewImageDialog;
 
 public class ImageView extends JPanel {
     private Timer loadingTimer;
@@ -26,8 +31,9 @@ public class ImageView extends JPanel {
     };
 
     private Image image;
-    private String name;
+    private String imageName;
     private String url;
+    private JsonObject fileData;
     private final int fixedWidth = 64;
     private final int fixedHeight = 64;
     private final IconButton deleteButton;
@@ -38,6 +44,8 @@ public class ImageView extends JPanel {
     private final JLabel loadingLabel;
 
     public boolean isUploaded = false;
+
+    private MessageGroupComponent messageGroupCom;
 
     public ImageView(Image image) {
         this.image = image;
@@ -73,9 +81,18 @@ public class ImageView extends JPanel {
         add(imageLabel,BorderLayout.CENTER);
 
         setPreferredSize(new Dimension(fixedWidth, fixedHeight));
+
+        addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getButton() == MouseEvent.BUTTON1 && isUploaded && !reUploadButton.isVisible()) {
+                    previewImageDialog.showDialog(getName(),messageGroupCom.getUploadList());
+                }
+            }
+        });
     }
 
-    public void setImage(String url,String name) {
+    public void setImage(String url, String name, JsonObject fileData) {
         Image img = null;
         if (url == null || url.isEmpty()) {
             img = ImgUtils.iconToImage(AIAssistantIcons.UPLOAD_ERROR);
@@ -86,13 +103,18 @@ public class ImageView extends JPanel {
         }
 
         this.image = img;
-        this.name = name;
+        this.imageName = name;
         this.url = url;
+        this.fileData = fileData;
         remove(imageLabel);
         if (img != null) {
             imageLabel = new RoundImage(ImageLoader.scaleImage(img,fixedWidth, fixedHeight));
             add(imageLabel,BorderLayout.CENTER);
         }
+    }
+
+    public void setMessageGroupCom(MessageGroupComponent messageGroupCom) {
+        this.messageGroupCom = messageGroupCom;
     }
 
     public IconButton getDeleteButton() {
@@ -108,11 +130,15 @@ public class ImageView extends JPanel {
     }
 
     public String getName() {
-        return this.name;
+        return this.imageName;
     }
 
     public String getUrl() {
         return this.url;
+    }
+
+    public JsonObject getFileData() {
+        return this.fileData;
     }
 
     public void setLoading(boolean isLoading) {

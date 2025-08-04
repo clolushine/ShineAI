@@ -1,11 +1,13 @@
 package com.shine.ai.ui;
 
+import com.google.gson.JsonArray;
 import com.intellij.icons.AllIcons;
 import com.intellij.openapi.ui.MessageType;
 import com.intellij.util.ImageLoader;
 import com.shine.ai.icons.AIAssistantIcons;
 import com.shine.ai.util.BalloonUtil;
 import com.shine.ai.util.ImgUtils;
+import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
 import java.awt.*;
@@ -13,21 +15,29 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 
+import static com.shine.ai.MyToolWindowFactory.previewImageDialog;
+
 public class ImageViewInMessage extends JPanel {
     private Image image;
+    private String imageName;
+    private JsonArray imageGroup;
     private int fixedW = 64;
     private int fixedH = 64;
+    private int fixedSize = 288;
     private Boolean isError = false;
 
     private final JPopupMenu popupMenu;
 
     private RoundImage imageLabel; // 将 imageLabel 提升为成员变量
-    public ImageViewInMessage(Image image,String fileName,int fixedWidth) {
+    public ImageViewInMessage(Image image, String fileName, JsonArray imageGroup) {
         if (image != null) {
             this.image = image;
-        }else if (!fileName.isEmpty()) {
+        }else if (!fileName.isBlank()) {
+            this.imageName = fileName;
             this.image = ImgUtils.loadImageFormLocalCache(fileName);
         }
+
+        this.imageGroup = imageGroup; // 接收一个图片组数据
 
         // 兜底显示个错误图片
         if (this.image == null) {
@@ -35,7 +45,7 @@ public class ImageViewInMessage extends JPanel {
             this.isError = true;
         }
 
-        this.fixedW = Math.max(fixedWidth, 64);
+        this.fixedW = Math.max(fixedSize, 64);
         this.fixedH = getFixedH(this.image,this.fixedW);
         this.popupMenu = createPopupMenu();
 
@@ -56,9 +66,23 @@ public class ImageViewInMessage extends JPanel {
             public void mouseClicked(MouseEvent e) {
                 if (e.getButton() == MouseEvent.BUTTON3 && !isError) {
                     popupMenu.show(imageLabel, e.getX(), e.getY());
+                }else if (e.getButton() == MouseEvent.BUTTON1 && !isError) {
+                    previewImageDialog.showDialog(getImageName(),getImageGroup());
                 }
             }
         });
+    }
+
+    public BufferedImage getImage() {
+        return (BufferedImage) this.image;
+    }
+
+    public String getImageName() {
+        return this.imageName;
+    }
+
+    public JsonArray getImageGroup() {
+        return this.imageGroup;
     }
 
     private int getFixedH(Image image,int fixedWidth) {
@@ -88,15 +112,21 @@ public class ImageViewInMessage extends JPanel {
             ImgUtils.saveAsToImage(this.image);
         });
 
-        JMenuItem itemPreview = new JMenuItem("Preview");
-        itemPreview.addActionListener(e -> {
-            System.out.println("Image Preview");
-        });
+        JMenuItem itemPreview = getJMenuItem();
+
         popupMenu.add(itemCopy);
         popupMenu.add(itemSave);
         popupMenu.add(itemPreview);
 
         return popupMenu;
+    }
+
+    private @NotNull JMenuItem getJMenuItem() {
+        JMenuItem itemPreview = new JMenuItem("Preview",AllIcons.Actions.Preview);
+        itemPreview.addActionListener(e -> {
+            previewImageDialog.showDialog(getImageName(),getImageGroup());
+        });
+        return itemPreview;
     }
 
     public void setImage(String url,int fixedWidth) {

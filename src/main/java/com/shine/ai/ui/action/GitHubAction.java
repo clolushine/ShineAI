@@ -16,6 +16,6 @@ public class GitHubAction extends DumbAwareAction {
 
     @Override
     public void actionPerformed(@NotNull AnActionEvent e) {
-        BrowserUtil.browse("https://github.com/cloudshinezhong/ShineAI");
+        BrowserUtil.browse("https://github.com/clolushine/ShineAI");
     }
 }

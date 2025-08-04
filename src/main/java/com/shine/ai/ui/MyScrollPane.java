@@ -10,17 +10,16 @@ public class MyScrollPane extends JBScrollPane {
 
     public MyScrollPane (Component view, int vsbPolicy, int hsbPolicy) {
         super(view, vsbPolicy, hsbPolicy);
+        setBorder(JBUI.Borders.empty());
     }
 
     @Override
     public void updateUI() {
-        setBorder(JBUI.Borders.empty());
         super.updateUI();
     }
 
     @Override
     public void setCorner(String key, Component corner) {
-        setBorder(JBUI.Borders.empty());
         super.setCorner(key, corner);
     }
 }

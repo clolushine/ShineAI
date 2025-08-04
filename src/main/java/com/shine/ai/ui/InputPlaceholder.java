@@ -5,36 +5,45 @@ import com.intellij.ui.JBColor;
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.text.JTextComponent;
 import java.awt.*;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 
 public class InputPlaceholder extends JLabel implements FocusListener, DocumentListener {
-    private JTextArea textArea;
-    private String placeholder;
+    private final JTextComponent textComponent;
+    private final String placeholder;
 
-    public InputPlaceholder(String placeholder, JTextArea textArea) {
-        this.textArea = textArea;
+    public InputPlaceholder(String placeholder, JTextComponent component) {
+        this.textComponent = component;
         this.placeholder = placeholder;
-        setText(placeholder);
-        setForeground(JBColor.namedColor("Label.infoForeground", JBColor.GRAY));
 
-        textArea.addFocusListener(this);
-        textArea.getDocument().addDocumentListener(this);
-
-        //  将 TextPrompt 添加到 JTextArea 的 viewport 中
-        textArea.setLayout(new BorderLayout());
-        textArea.add(this, BorderLayout.WEST); //  调整位置根据需要
-
-        //  根据 JTextArea 的初始状态显示或隐藏 placeholder
+        init();
+        attachListeners();
         updateVisibility();
     }
 
+    private void init() {
+        setText(placeholder);
+        setForeground(JBColor.GRAY);
 
-    private void updateVisibility() {
-        setVisible(textArea.getText().isEmpty());
+        if (textComponent instanceof JTextArea) {
+            textComponent.setLayout(new BorderLayout());
+            textComponent.add(this, BorderLayout.NORTH);
+        } else {
+            textComponent.setLayout(new BorderLayout());
+            textComponent.add(this, BorderLayout.WEST);
+        }
     }
 
+    private void attachListeners() {
+        textComponent.addFocusListener(this);
+        textComponent.getDocument().addDocumentListener(this);
+    }
+
+    private void updateVisibility() {
+        setVisible(textComponent.getText().isEmpty());
+    }
 
     @Override
     public void focusLost(FocusEvent e) {

@@ -1,29 +1,34 @@
 package com.shine.ai.ui;
 
+import com.intellij.openapi.Disposable;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.geom.RoundRectangle2D;
 
-public class RoundPanel extends JComponent {
-    private int arcWidth = 10;
-    private int arcHeight = 10;
+public class RoundPanel extends JComponent implements Disposable {
+    private int arcWidth = 6;
+    private int arcHeight = 6;
 
     public RoundPanel(LayoutManager borderLayout) {
         super();
         setDoubleBuffered(true);
-        setOpaque(true); // 关键修改：确保面板不透明
         setLayout(borderLayout);
     }
 
     public RoundPanel() {
         super();
         setDoubleBuffered(true);
-        setOpaque(true); // 关键修改：确保面板不透明
     }
 
     public void setArc(int arcWidth, int arcHeight) {
         this.arcWidth = arcWidth;
         this.arcHeight = arcHeight;
+        repaint(); // 重新绘制
+    }
+
+    public void setBG(Color color) {
+        setBackground(color);
         repaint(); // 重新绘制
     }
 
@@ -41,5 +46,10 @@ public class RoundPanel extends JComponent {
         g2.fill(new RoundRectangle2D.Double(0, 0, getWidth(), getHeight(), this.arcWidth, this.arcHeight));
 
         g2.dispose();
+    }
+
+    @Override
+    public void dispose() {
+        super.getGraphics().dispose();
     }
 }

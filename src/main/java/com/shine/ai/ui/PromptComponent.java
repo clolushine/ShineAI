@@ -1,12 +1,9 @@
 package com.shine.ai.ui;
 
-import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.intellij.openapi.project.Project;
 import com.intellij.ui.JBColor;
 import com.intellij.ui.components.JBPanel;
 import com.intellij.util.ui.JBUI;
-import com.shine.ai.settings.AIAssistantSettingsState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,56 +16,45 @@ import java.util.List;
 public class PromptComponent extends JBPanel<PromptComponent> {
     private static final Logger LOG = LoggerFactory.getLogger(PromptComponent.class);
 
-    private final AIAssistantSettingsState stateStore = AIAssistantSettingsState.getInstance();
-
     public JLabel withContentLabel;
-
-    private final Project project;
 
     public JsonObject chatItemData;
 
     public String chatId;
 
-    public MessageGroupComponent msgGroupComp;
+    private MessageTextareaComponent textArea;
 
     public Boolean showActions = true;
 
-    public PromptComponent(Project project,JsonObject chatItem,MessageGroupComponent msgGroupComp) {
-        this.project = project;
-
-        this.msgGroupComp = msgGroupComp;
-
-        this.chatItemData = chatItem;
+    public PromptComponent(JsonObject chatItem) {
 
         setDoubleBuffered(true);
         setOpaque(true);
         setBorder(JBUI.Borders.empty(6));
         setLayout(new BorderLayout(JBUI.scale(8), 0));
 
-        initComponent();
+        initComponent(chatItem);
     }
 
-    public void initComponent() {
+    public void initComponent(JsonObject chatItem) {
+        chatItemData = chatItem;
+
         if (chatItemData.has("promptId")) {
             chatId = chatItemData.get("promptId").getAsString();
             showActions = false;
         }else {
-            chatId = chatItemData.get("chatId").getAsString();
+            chatId = chatItemData.get("id").getAsString();
         }
 
-        chatItemData.addProperty("chatId",chatId);
+        chatItemData.addProperty("id",chatId);
 
         String content = chatItemData.get("content").getAsString();
         boolean isMe = chatItemData.get("isMe").getAsBoolean();
         String name = chatItemData.get("name").getAsString();
         String withContent = chatItemData.get("withContent").getAsString();
+        boolean isVisible = chatItem.has("enable") && chatItem.get("enable").getAsBoolean();
 
-        JsonArray attachments = null;
-//        if (chatItemData.has("attachments") && !chatItemData.get("attachments").isJsonNull()) {
-//            attachments = chatItemData.get("attachments").getAsJsonArray();
-//        }else {
-//            attachments = new JsonArray();
-//        }
+        setVisible(isVisible); // 设置是否可见
 
         JPanel northPanel = new JPanel(new BorderLayout());
         northPanel.setOpaque(false);
@@ -107,7 +93,7 @@ public class PromptComponent extends JBPanel<PromptComponent> {
         messagePanel.setMinimumSize(new Dimension(getMinimumSize().width,32));
         messagePanel.setBorder(JBUI.Borders.empty(2));
 
-        JComponent messageTextarea = MessageTextareaComponent(content,isMe,attachments);
+        JComponent messageTextarea = MessageTextareaComponent(content,isMe);
         messagePanel.add(messageTextarea,BorderLayout.CENTER);
 
         centerPanel.add(messagePanel, BorderLayout.CENTER);
@@ -119,7 +105,7 @@ public class PromptComponent extends JBPanel<PromptComponent> {
         JPanel southContentPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
 
         withContentLabel = new JLabel();
-        withContentLabel.setForeground(JBColor.namedColor("Label.infoForeground", new JBColor(Color.decode("#ee9e26"), Color.decode("#ee9e26"))));
+        withContentLabel.setForeground(new JBColor(Color.decode("#ee9e26"), Color.decode("#ee9e26")));
         withContentLabel.setFont(JBUI.Fonts.create(null,10));
         withContentLabel.setText(withContent);
         southContentPanel.add(withContentLabel);
@@ -129,19 +115,13 @@ public class PromptComponent extends JBPanel<PromptComponent> {
         add(southPanel,BorderLayout.SOUTH); // 将 MainPanel 添加到中心
     }
 
-    public RoundPanel MessageTextareaComponent (String content, Boolean isMe, JsonArray attachments) {
+    public RoundPanel MessageTextareaComponent (String content, Boolean isMe) {
         RoundPanel messagePanel = new RoundPanel();
         messagePanel.setLayout(new BoxLayout(messagePanel,BoxLayout.Y_AXIS));
-        messagePanel.add(new MessageTextareaComponent(content,isMe ? Color.decode("#b4d6ff") : Color.decode("#ffffff")));
-//        for (int i = 0; i < attachments.size(); i++) {
-//            JsonObject item = attachments.get(i).getAsJsonObject();
-//            if (item.has("type") && StringUtil.equals(item.get("type").getAsString(),"image")) {
-//                ImageViewInMessage imageView = new ImageViewInMessage(null,item.get("fileName").getAsString(),256);
-//                messagePanel.add(Box.createRigidArea(new Dimension(0, 8))); // 上间距
-//                messagePanel.add(imageView);
-//                if (i != attachments.size() - 1) messagePanel.add(Box.createRigidArea(new Dimension(0, 8))); // 下间距
-//            }
-//        }
+
+        textArea = new MessageTextareaComponent(content,isMe ? Color.decode("#b4d6ff") : Color.decode("#ffffff"));
+
+        messagePanel.add(textArea);
         return messagePanel;
     }
 }

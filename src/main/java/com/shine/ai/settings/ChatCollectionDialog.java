@@ -11,14 +11,15 @@ import com.intellij.ui.components.JBPanel;
 import com.intellij.ui.components.panels.VerticalLayout;
 import com.intellij.util.ui.JBUI;
 import com.intellij.util.ui.UIUtil;
+import com.shine.ai.db.DBUtil;
+import com.shine.ai.db.chats.ChatsManager;
+import com.shine.ai.db.colls.Colls;
+import com.shine.ai.db.colls.CollsManager;
 import com.shine.ai.ui.IconButton;
 import com.shine.ai.ui.MainPanel;
 import com.shine.ai.ui.MyScrollPane;
 import com.shine.ai.ui.RoundPanel;
-import com.shine.ai.util.BalloonUtil;
-import com.shine.ai.util.FileUtil;
-import com.shine.ai.util.StringUtil;
-import com.shine.ai.util.TimeUtil;
+import com.shine.ai.util.*;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
@@ -27,7 +28,7 @@ import javax.swing.event.DocumentListener;
 import javax.swing.text.*;
 import java.awt.*;
 import java.awt.event.*;
-import java.util.Objects;
+import java.util.List;
 
 import static com.shine.ai.MyToolWindowFactory.ACTIVE_CONTENT;
 
@@ -39,6 +40,12 @@ public class ChatCollectionDialog extends JDialog {
             ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 
     private final AIAssistantSettingsState stateStore = AIAssistantSettingsState.getInstance();
+
+    // colls db
+    private final CollsManager collsManager = CollsManager.getInstance();
+
+    // chats db
+    private final ChatsManager chatsManager = ChatsManager.getInstance();
 
     private JPanel contentPane;
     private JPanel addChatTitledBorderBox;
@@ -95,9 +102,13 @@ public class ChatCollectionDialog extends JDialog {
     }
 
     private void refreshMessages() {
-        MainPanel panel = (MainPanel) project.getUserData(ACTIVE_CONTENT);
+        MainPanel panel = getMainPanel();
         assert panel != null;
         panel.refreshMessages();
+    }
+
+    private MainPanel getMainPanel() {
+        return (MainPanel) project.getUserData(ACTIVE_CONTENT);
     }
 
     public void openDialog(JComponent _component) {
@@ -110,7 +121,7 @@ public class ChatCollectionDialog extends JDialog {
                 parentSize = _component.getParent().getSize(); //Try to get size from parent.  Could still be 0,0.
             }
 
-            dialog.setPreferredSize(new Dimension(getMinimumSize().width, (int) (parentSize.height * 0.88)));
+            dialog.setPreferredSize(new Dimension(getMinimumSize().width, (int) (parentSize.height * 0.96)));
             dialog.pack(); //  先调用 pack()
             dialog.setLocationRelativeTo(_component);
             dialog.setVisible(true);
@@ -118,29 +129,32 @@ public class ChatCollectionDialog extends JDialog {
     }
 
     public void updateLayout() {
-        LayoutManager layout = collectionList.getLayout();
-        int componentCount = collectionList.getComponentCount();
-        for (int i = 0 ; i< componentCount ; i++) {
-            layout.removeLayoutComponent(collectionList.getComponent(i));
-            layout.addLayoutComponent(null,collectionList.getComponent(i));
-        }
         collectionList.revalidate();
         collectionList.repaint();
     }
 
     public void addNewChat(JComponent _component) {
-        if (stateStore.AIChatCollection.size() >= 99) {
-            BalloonUtil.showBalloon("Cannot add more chat collection,\nPlease delete previous chat collection at first.", MessageType.ERROR,_component);
+        if (collsManager.findAllCounts() >= 99) {
+            BalloonUtil.showBalloon("Cannot add more chat collection,\nPlease delete previous chat collection at first.", MessageType.WARNING,_component);
         }
-        stateStore.AIChatCollection.add(0,stateStore.createChatCollection());
+
+        // 写入到db
+        DBUtil.createCollsAndChats();
+
         // 创建元素，插入第一个
-        BalloonUtil.showBalloon("Add chat collection successfully",MessageType.INFO,_component);
+        // BalloonUtil.showBalloon("Add chat collection successfully",MessageType.INFO,_component);
     }
 
     public void createHistoryList() {
-        if (!stateStore.AIChatCollection.isEmpty()) {
-            for (String item : stateStore.AIChatCollection) {
-                CollectionItemComponent collection = new CollectionItemComponent(stateStore.getJsonObject(item));
+        // 查询db
+        List<JsonObject> collsList = collsManager.findAll();
+
+        if (!collsList.isEmpty()) {
+            for (JsonObject item : collsList) {
+                // 添加数量参数
+                item.addProperty("chatsCount",chatsManager.findByCollIdCounts(item.get("id").getAsString()));
+
+                CollectionItemComponent collection = new CollectionItemComponent(item);
                 collectionList.add(collection);
             }
             updateLayout();
@@ -158,16 +172,17 @@ public class ChatCollectionDialog extends JDialog {
 
             JPanel northPanel = new JPanel(new BorderLayout());
             northPanel.setOpaque(false);
-            northPanel.setBorder(JBUI.Borders.empty(6));
+            northPanel.setBorder(JBUI.Borders.empty(4));
 
             JPanel northLeftPanel = new JPanel(new BorderLayout());
-            String titleLabelStr = collectionItem.get("collectionTitle").getAsString().isEmpty() ? "null" : StringUtil.stringEllipsis(collectionItem.get("collectionTitle").getAsString(),20);
+            String titleLabelStr = collectionItem.get("title").getAsString().isEmpty() ? "null" : StringUtil.stringEllipsis(collectionItem.get("title").getAsString(),20);
             JLabel titleLabel = new JLabel(titleLabelStr);
+            titleLabel.setBorder(JBUI.Borders.emptyBottom(2));
             titleLabel.setFont(JBUI.Fonts.create("Microsoft YaHei",stateStore.CHAT_PANEL_FONT_SIZE + 1));
 
             JLabel timeLabel = new JLabel();
             timeLabel.setFont(JBUI.Fonts.smallFont());
-            timeLabel.setText(TimeUtil.timeFormat(collectionItem.get("createat").getAsLong(),null));
+            timeLabel.setText(TimeUtil.timeFormat(collectionItem.get("createAt").getAsLong(),null));
             northLeftPanel.add(titleLabel,BorderLayout.NORTH);
             northLeftPanel.add(timeLabel,BorderLayout.SOUTH);
             northPanel.add(northLeftPanel,BorderLayout.WEST);
@@ -175,19 +190,20 @@ public class ChatCollectionDialog extends JDialog {
             JPanel northRightPanel = new JPanel(new BorderLayout());
             JLabel chatCountLabel = new JLabel();
             chatCountLabel.setFont(JBUI.Fonts.label());
-            chatCountLabel.setText("total：" + collectionItem.get("chatList").getAsJsonArray().size() + " dialogs");
-            northRightPanel.add(chatCountLabel,BorderLayout.NORTH);
+            chatCountLabel.setText("total：" + collectionItem.get("chatsCount").getAsInt() + " dialogs");
+            northRightPanel.add(chatCountLabel,BorderLayout.CENTER);
             northPanel.add(northRightPanel,BorderLayout.EAST);
 
             add(northPanel,BorderLayout.NORTH);
 
             JPanel centerPanel = new JPanel(new BorderLayout());
             centerPanel.setOpaque(false);
-            centerPanel.setBorder(JBUI.Borders.empty(6));
+            centerPanel.setBorder(JBUI.Borders.empty(4));
 
             RoundPanel contentTextPanel = new RoundPanel(new BorderLayout());
             contentTextPanel.setBackground(new JBColor(Color.decode("#f1f1e1"), Color.decode("#f1f1f1")));
-            String contentTextAreaStr = collectionItem.get("collectionSubTitle").getAsString().isEmpty() ? "null" : StringUtil.stringEllipsis(collectionItem.get("collectionSubTitle").getAsString(), 192);
+            contentTextPanel.setMaximumSize(new Dimension(contentTextPanel.getWidth(),128));
+            String contentTextAreaStr = collectionItem.get("subTitle").getAsString().isEmpty() ? "null" : StringUtil.stringEllipsis(collectionItem.get("subTitle").getAsString(), 192);
             LimitedTextAreaV contentTextArea = new LimitedTextAreaV(contentTextAreaStr);
             contentTextPanel.add(contentTextArea);
 
@@ -217,19 +233,17 @@ public class ChatCollectionDialog extends JDialog {
     private @NotNull IconButton getOpenAction(JComponent component, JsonObject item) {
         IconButton openAction = new IconButton("open",AllIcons.General.OpenInToolWindow);
         openAction.addActionListener(e -> {
-            JsonObject firstCollectionItem = stateStore.getJsonObject(stateStore.AIChatCollection.get(0));
-            if (Objects.equals(firstCollectionItem.get("collId").getAsString(), item.get("collId").getAsString())) {
-                BalloonUtil.showBalloon("Open fail：Current chat collection already opened.",MessageType.WARNING,collectionList);
+            // 查询db
+            Colls colls = collsManager.findLatestOne();
+
+            if (colls != null && StringUtil.equals(colls.getJsonObjectAll().get("id").getAsString(), item.get("id").getAsString())) {
+                BalloonUtil.showBalloon("Open fail：Current chat collection already opened.",MessageType.WARNING,component);
                 return;
             }
-            for (int i = 0; i < stateStore.AIChatCollection.size(); i++) {
-                JsonObject currentCollection = stateStore.getJsonObject(stateStore.AIChatCollection.get(i));
-                if (Objects.equals(currentCollection.get("collId").getAsString(), item.get("collId").getAsString())) {
-                    stateStore.AIChatCollection.set(i, stateStore.getJsonString(currentCollection)); // 使用 set() 方法修改列表元素
-                    stateStore.updateChatCollectionInfo(currentCollection);
-                    break; // 可选：如果 promptId 是唯一的，找到后可以跳出循环
-                }
-            }
+
+            // 写入到db
+            DBUtil.updateCollsById(item.get("id").getAsString());
+
             refreshMessages();
             dispose();
         });
@@ -239,20 +253,25 @@ public class ChatCollectionDialog extends JDialog {
     private @NotNull IconButton getDeleteAction(JComponent component, JsonObject item) {
         IconButton deleteAction = new IconButton("delete",AllIcons.Actions.GC);
         deleteAction.addActionListener(e -> {
-            JsonObject firstCollectionItem = stateStore.getJsonObject(stateStore.AIChatCollection.get(0));
+            // 查询db
+            Colls colls = collsManager.findLatestOne();
+
             boolean yes = MessageDialogBuilder.yesNo("Are you sure you want to delete this chat?",
                             "There will be delete this dialogs.")
                     .yesText("Yes")
                     .noText("No").ask(component);
             if (yes) {
-                if (Objects.equals(firstCollectionItem.get("collId").getAsString(), item.get("collId").getAsString())) {
-                    BalloonUtil.showBalloon("Delete fail：Can not delete already opened chat collection.",MessageType.ERROR,collectionList);
+                if (colls != null && StringUtil.equals(colls.getJsonObjectAll().get("id").getAsString(), item.get("id").getAsString())) {
+                    BalloonUtil.showBalloon("Delete fail：Can not delete already opened chat collection.",MessageType.ERROR,component);
                     return;
                 }
-                BalloonUtil.showBalloon("Delete successfully",MessageType.INFO,collectionList);
-                stateStore.deleteChatCollectionById(item.get("collId").getAsString());
-                stateStore.updateChatCollectionInfo(item);
+                BalloonUtil.showBalloon("Delete successfully",MessageType.INFO,ListScrollPanel);
+
+                // 写入到db
+                DBUtil.delCollsById(item.get("id").getAsString());
+
                 collectionList.remove(component);
+
                 updateLayout();
             }
         });
@@ -262,11 +281,20 @@ public class ChatCollectionDialog extends JDialog {
     private @NotNull IconButton getExportAction(JComponent component, JsonObject item) {
         IconButton exportAction = new IconButton("export",AllIcons.Actions.Upload);
         exportAction.addActionListener(e -> {
-            String collTitle = item.get("collectionTitle").getAsString();
-            String collUpdateTime = TimeUtil.timeFormat(item.get("updateat").getAsLong(),"YYYYMMDDHHmmss");
+            String collTitle = item.get("title").getAsString();
+            String collUpdateTime = TimeUtil.timeFormat(item.get("updateAt").getAsLong(),"YYYYMMDDHHmmss");
+
+            // 查询db
+            List<JsonObject> chatList = chatsManager.findByCollIdAll(item.get("id").getAsString());
+
+            // 整合数据
+            JsonObject exportData = new JsonObject();
+            exportData.add("chatList", JsonUtil.getJsonArray(chatList));
+            JsonObject targetExportData = JsonUtil.mergeJsonObject(item,exportData);
+
             assert collTitle != null;
-            String fileName = !collTitle.isEmpty() ? collTitle.substring(0, Math.min(collTitle.length(), 20)) + collUpdateTime : item.get("collId").getAsString() + collUpdateTime;
-            FileUtil.exportToJson(item,fileName,component);
+            String fileName = !collTitle.isEmpty() ? collTitle.substring(0, Math.min(collTitle.length(), 20)) + collUpdateTime : item.get("id").getAsString() + collUpdateTime;
+            FileUtil.exportToJson(targetExportData,fileName,component);
         });
         return exportAction;
     }
@@ -316,8 +344,8 @@ public class ChatCollectionDialog extends JDialog {
             setEditable(false); // 启用自动换行
             setOpaque(false); // 按单词换行
             setBorder(JBUI.Borders.empty(6));
-            setForeground(JBColor.namedColor("Label.infoForeground", new JBColor(Color.decode("#ffffff"), Color.decode("#000000"))));
             setFont(new Font("Microsoft YaHei", Font.PLAIN,stateStore.CHAT_PANEL_FONT_SIZE));
+            setForeground(new JBColor(Color.decode("#060606"), Color.decode("#000000")));
             setLineWrap(true);
             setWrapStyleWord(true);
             setText(content);

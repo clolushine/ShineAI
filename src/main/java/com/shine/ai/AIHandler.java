@@ -5,6 +5,7 @@ import com.google.gson.JsonParser;
 import com.shine.ai.settings.AIAssistantSettingsState;
 import com.shine.ai.ui.MainPanel;
 import com.shine.ai.ui.MessageComponent;
+import com.shine.ai.util.JsonUtil;
 import com.shine.ai.util.ShineAIUtil;
 import com.shine.ai.util.StringUtil;
 import okhttp3.*;
@@ -26,8 +27,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 
-public class GoogleAIHandler extends AbstractHandler {
-    private static final Logger LOG = LoggerFactory.getLogger(GoogleAIHandler.class);
+public class AIHandler extends AbstractHandler {
+    private static final Logger LOG = LoggerFactory.getLogger(AIHandler.class);
     private final AIAssistantSettingsState state = AIAssistantSettingsState.getInstance();
 
     private boolean requestRetry = false; // 添加一个标志来防止无限重试
@@ -36,7 +37,7 @@ public class GoogleAIHandler extends AbstractHandler {
     private EventSource requestEvent = null;
 
     public Request createRequest(MainPanel mainPanel, JsonObject messageMy) {
-        RequestProvider provider = new RequestProvider().create(mainPanel, messageMy, "/gem/geminiChat");
+        RequestProvider provider = new RequestProvider().create(mainPanel, messageMy, mainPanel.getAIApi());
         return new Request.Builder()
                 .url(provider.getUrl())
                 .headers(Headers.of(provider.getHeader()))
@@ -47,8 +48,9 @@ public class GoogleAIHandler extends AbstractHandler {
 
     public OkHttpClient createHttpClient() throws NoSuchAlgorithmException, KeyManagementException {
         OkHttpClient.Builder builder = new OkHttpClient.Builder()
-                .connectTimeout(Integer.parseInt(state.requestTimeout), TimeUnit.MILLISECONDS)
-                .readTimeout(Integer.parseInt(state.requestTimeout), TimeUnit.MILLISECONDS);
+                .retryOnConnectionFailure(true)
+                .connectTimeout(state.requestTimeout,TimeUnit.MILLISECONDS)
+                .readTimeout(state.requestTimeout,TimeUnit.MILLISECONDS);
         builder.hostnameVerifier(getHostNameVerifier());
         builder.sslSocketFactory(getSslContext().getSocketFactory(), (X509TrustManager) getTrustAllManager());
         return builder.build();
@@ -126,7 +128,7 @@ public class GoogleAIHandler extends AbstractHandler {
         }
         JsonObject event = new JsonObject();
         event.addProperty("event", String.format("message:%s",msgCode == 0 && code == 0 ? "done" : "err"));
-        JsonObject dck = state.mergeJsonObject(event,data);
+        JsonObject dck = JsonUtil.mergeJsonObject(event,data);
         mainPanel.aroundRequest(false);
         component.updateMessage(dck);
     }
@@ -142,6 +144,7 @@ public class GoogleAIHandler extends AbstractHandler {
     public EventSource handleStream(MainPanel mainPanel, MessageComponent component, JsonObject messageMy) {
         try {
             Request request = createRequest(mainPanel,messageMy);
+
             OkHttpClient httpClient = createHttpClient();
             EventSource.Factory factory = EventSources.createFactory(httpClient);
             EventSourceListener listener = new EventSourceListener() {
@@ -171,6 +174,7 @@ public class GoogleAIHandler extends AbstractHandler {
 
                 @Override
                 public void onFailure(@NotNull EventSource eventSource, @Nullable Throwable t, @Nullable Response response) {
+                    System.out.println(response);
                     try {
                         if (t != null) {
                             if (t.getMessage().contains("CANCEL")) {

@@ -14,7 +14,7 @@
 #### 工具版本
 - 语言：java 17
 - 构建工具：gradle 8.7
-- 适配idea版本: 222.2680.4-243.*
+- 适配idea版本：222.2680.4-243.*
 
 ### 安装和使用
 + 下载插件: 首先，你需要下载插件的 zip 文件或 jar 文件。(请到releases处下载)
@@ -27,12 +27,25 @@
 
 ### 功能和用法
 + 支持AI聊天，支持主流的AI大模型，支持AI服务商切换
-+ 支持文本内容生成，支持流式输出聊天内容，支持AI图片上传能力，支持提示词功能等
++ 支持文本内容生成，支持流式输出聊天内容，支持AI图片上传能力，图片预览功能
++ 支持多提示词功能
++ <em> 支持多AI API KEYS调用，且支持权重设置</em>
 + 支持数据记录保存，导出等
 + 可以查看以下演示图例了解
 
+#### 已支持的 AI 服务商
++ OpenAI
++ Google AI
++ Anthropic AI
++ Cloudflare Worker AI
++ Groq AI
++ OpenRouter AI
+
 ### 图例展示
 ![shine ai sample](/shine_ai_sample.gif)
+
+#### API KEYS
+![shine ai sample2](/shine_ai_sample2.gif)
 
 ### UniShine for h5
 - h5版地址： [https://unishine.pages.dev/#/pages/index/index](https://unishine.pages.dev/#/pages/index/index)
