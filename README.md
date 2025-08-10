@@ -1,12 +1,9 @@
 # ShineAI
 
-## 公告
-该项目停止更新，本人精力有限不再维护。
-
-### ShineAI 介绍
-- 本项目是个人idea插件练习实践项目，项目不完善，不会发布到jetbrains插件市场(不商用)。
-- 项目整合了市面上主流的AI服务商，项目暂只完成了文本生成这块功能。就是主流的AI聊天功能。
-- 项目使用的是java swing开发前端，项目存在一些性能问题还未解决，尤其是在流式渲染时，该问题可能会影响使用。
+### 介绍
+- 本项目是idea插件项目。
+- 项目整合了市面上主流的AI服务商，项目暂集成了文本生成这块功能。就是主流的AI聊天功能。
+- 项目使用的是java swing开发前端，项目使用原生html渲染，<strong>没有使用嵌入现代浏览器渲染html</strong>。
 - <strong> 项目后端未开源。</strong>
 - 不同的AI服务商数据及接口整合有一定的工作量，<strong>本项目后端接入了账号登入，及涉及一些个人数据上传与保存(数据隐私问题等)，未作开源。</strong>
 - 因为是个人项目，且涉及到未开源API，<strong>建议有能力者自己实现后端接口。</strong>
@@ -17,7 +14,7 @@
 - 适配idea版本：222.2680.4-243.*
 
 ### 安装和使用
-+ 下载插件: 首先，你需要下载插件的 zip 文件或 jar 文件。(请到releases处下载)
++ 下载插件: 首先，你需要下载插件的 zip 文件或 jar 文件。(请到releases处下载或源码构建)
 + 打开插件设置: 在 IntelliJ IDEA 中，打开 "Settings/Preferences" (快捷键通常是 Ctrl+Alt+S 或 Cmd+,).
 + 选择 "Plugins": 在 "Settings/Preferences" 对话框中，选择 "Plugins"。
 + 点击齿轮图标： 在 "Plugins" 页面，点击右上角的齿轮图标。
@@ -53,4 +50,9 @@
 - h5版地址： [https://unishine.pages.dev/#/pages/index/index](https://unishine.pages.dev/#/pages/index/index)
 
 ### 许可证 (License)
-本项目中的**代码**以 [**GPL 许可证**](LICENSE) 授权发布。
+本项目中的**前端代码**以 [**GPL 许可证**](LICENSE) 版本 2 (GNU GENERAL PUBLIC LICENSE Version 2, June 1991) 授权发布。
+Copyright (C) 2016-2025 Observer & Creator (shine)
+**重要注意事项及说明：**
+1.  **关于后端：** 本项目的后端代码**未开源**。这意味着前端插件在某些功能上（如与AI服务商的数据及接口整合、用户登录、个人数据上传与保存等）可能需要一个配套的后端服务。请注意，GPL v2 许可证仅适用于本项目中已开源的前端代码部分（即 IntelliJ IDEA 插件），不适用于未开源的后端服务。
+2.  **关于分发限制：** GPL v2 许可证旨在确保软件的自由使用、修改和分发。根据 GPL v2 许可证的条款（特别是第 6 条），**您对本项目代码的任何复制、分发和修改都必须遵循 GPL v2 许可证，并且不得施加任何额外的限制**。这意味着，若您遵守 GPL v2 许可证的条款，**您可以将基于本项目代码的插件发布到任何平台，包括 JetBrains Marketplace。** 原声明中“不被允许发布到 JetBrains Marketplace 平台”的限制与 GPL v2 许可证的精神和条款直接冲突，因此，根据 GPL v2 许可证，该限制是不生效或无效的。
+如果您希望在您的项目中使用此代码，请确保您理解并遵守 GPL v2 许可证的全部条款。有关 GPL v2 许可证的详细条款，请参阅本项目根目录下的 `LICENSE` 文件。
