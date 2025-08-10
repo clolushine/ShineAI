@@ -2,7 +2,7 @@ package com.shine.ai;
 
 import com.google.gson.JsonObject;
 import com.shine.ai.core.TokenManager;
-import com.shine.ai.core.builder.OfficialBuilder;
+import com.shine.ai.core.builder.OptionBuilder;
 import com.shine.ai.ui.MainPanel;
 import static com.shine.ai.settings.AIAssistantSettingsPanel.SHINE_AI_BASE_URL;
 
@@ -34,7 +34,7 @@ public class RequestProvider {
 
         provider.url = baseUrl + url;
         provider.header = TokenManager.getInstance().getShineAIHeaders();
-        provider.data = OfficialBuilder.buildShineAI(messageMy,mainPanel.getContentPanel(),mainPanel.getPromptsPanel());
+        provider.data = OptionBuilder.buildShineAI(messageMy,mainPanel.getContentPanel(),mainPanel.getPromptsPanel());
 
         return provider;
     }

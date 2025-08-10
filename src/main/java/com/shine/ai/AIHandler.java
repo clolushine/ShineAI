@@ -48,9 +48,11 @@ public class AIHandler extends AbstractHandler {
 
     public OkHttpClient createHttpClient() throws NoSuchAlgorithmException, KeyManagementException {
         OkHttpClient.Builder builder = new OkHttpClient.Builder()
-                .retryOnConnectionFailure(true)
+                // 防止 NAT/防火墙在空闲时切断，开启心跳 (服务器如果不发送心跳，这里会自己发 ping)
+                .pingInterval(30, TimeUnit.SECONDS)
                 .connectTimeout(state.requestTimeout,TimeUnit.MILLISECONDS)
-                .readTimeout(state.requestTimeout,TimeUnit.MILLISECONDS);
+                .readTimeout(state.requestTimeout,TimeUnit.MILLISECONDS)
+                .writeTimeout(state.requestTimeout,TimeUnit.MILLISECONDS);
         builder.hostnameVerifier(getHostNameVerifier());
         builder.sslSocketFactory(getSslContext().getSocketFactory(), (X509TrustManager) getTrustAllManager());
         return builder.build();
@@ -174,7 +176,6 @@ public class AIHandler extends AbstractHandler {
 
                 @Override
                 public void onFailure(@NotNull EventSource eventSource, @Nullable Throwable t, @Nullable Response response) {
-                    System.out.println(response);
                     try {
                         if (t != null) {
                             if (t.getMessage().contains("CANCEL")) {

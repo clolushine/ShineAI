@@ -161,7 +161,6 @@ public class MyToolWindowFactory implements ToolWindowFactory {
             }
         });
 
-
        chatCollectionAction = new ChatCollectionAction(toolWindow.getComponent());
 
         List<AnAction> actionList = new ArrayList<>();
@@ -169,6 +168,34 @@ public class MyToolWindowFactory implements ToolWindowFactory {
         actionList.add(new GitHubAction());
         actionList.add(new SettingAction(MsgEntryBundle.message("action.settings")));
         toolWindow.setTitleActions(actionList);
+
+
+        // 监听 ToolWindow 的激活事件
+        // Option 1: ToolWindowManagerListener (更全局)
+//         project.getMessageBus().connect().subscribe(ToolWindowManagerListener.TOPIC, new ToolWindowManagerListener() {
+//             @Override
+//             public void toolWindowShown(@NotNull ToolWindow activatedToolWindow) {
+//                 if (activatedToolWindow == toolWindow) { // 确保是你的 ToolWindow
+//                     String displayName = toolWindow.getContentManager().getSelectedContent().getDisplayName();
+//                     AIToolWindow toolWin = getCurrentAIToolWindow(displayName);
+//                     if (toolWin != null) {
+//
+//                     }
+//                 }
+//             }
+//         });
+    }
+
+    private AIToolWindow getCurrentAIToolWindow(String panelName) {
+        AIToolWindow toolWin = null;
+        for (AIToolWindow toolWindow : AIToolWindows) {
+            String contentName = toolWindow.getPanelName();
+            if (StringUtil.equals(contentName, panelName)) {
+                toolWin = toolWindow;
+                break;
+            }
+        }
+        return toolWin;
     }
 
     public static void disabledCollectionAction(Boolean disable) {

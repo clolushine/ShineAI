@@ -19,15 +19,12 @@ import com.shine.ai.ui.MainPanel;
 import com.shine.ai.ui.MyScrollPane;
 import com.shine.ai.util.BalloonUtil;
 import com.shine.ai.util.GeneratorUtil;
-import com.shine.ai.util.JsonUtil;
 import com.shine.ai.util.StringUtil;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.util.Arrays;
@@ -461,8 +458,8 @@ public class ChatSettingDialog extends JDialog {
         prompt.addProperty("enable",true);
         promptList.add(new PromptItemComponent(prompt));
         thisPrompts.add(prompt);
-        // 这里需要写入state
-        stateStore.setAISettingInfoByKey(getMainPanel().getPanelName(),"prompts", JsonUtil.getJsonArray(thisPrompts));
+
+        getMainPanel().getPromptsPanel().addPrompt(prompt);
 
         updateLayout();
         scrollToBottom();

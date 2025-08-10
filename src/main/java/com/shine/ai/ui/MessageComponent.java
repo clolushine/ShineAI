@@ -10,7 +10,6 @@ import com.intellij.openapi.util.IconLoader;
 import com.intellij.ui.Gray;
 import com.intellij.ui.JBColor;
 import com.intellij.ui.components.JBPanel;
-import com.intellij.ui.components.JBScrollPane;
 import com.intellij.util.ImageLoader;
 import com.intellij.util.ui.JBUI;
 import com.shine.ai.icons.AIAssistantIcons;
@@ -72,6 +71,8 @@ public class MessageComponent extends JBPanel<MessageComponent> implements Messa
 
     private UpdateActionCallback updateActionCallback; // 持有接口引用
 
+    private MyScrollPane globalScrollPane; // 全局scrollPane引用
+
     @Override
     public void ontShowBalloon(String msg, MessageType type) {
         BalloonUtil.showBalloon(msg,type,this);
@@ -85,6 +86,11 @@ public class MessageComponent extends JBPanel<MessageComponent> implements Messa
     // 父组件通过此方法设置回调
     public void setActionCallback(UpdateActionCallback callback) {
         this.updateActionCallback = callback;
+    }
+
+    // 或者通过setter方法设置
+    public void setGlobalScrollPane(MyScrollPane globalScrollPane) {
+        this.globalScrollPane = globalScrollPane;
     }
 
     public MessageComponent(Project project,JsonObject chatItem) {
@@ -366,9 +372,7 @@ public class MessageComponent extends JBPanel<MessageComponent> implements Messa
 
         textPane.updateContent(content);
 
-        SwingUtilities.invokeLater(()-> {
-            textScrollPane.getHorizontalScrollBar().setValue(0);
-        });
+        SwingUtilities.invokeLater(()-> textScrollPane.getHorizontalScrollBar().setValue(0));
 
         return textScrollPane;
     }
@@ -418,17 +422,6 @@ public class MessageComponent extends JBPanel<MessageComponent> implements Messa
         messageAreaPanel.add(TextPaneAreaComponent(content));
 
         return messageAreaPanel; // 返回 JTextPane
-    }
-
-    public void updateContent(JsonObject newData) {
-        this.chatItemData = newData;
-
-        removeAll();
-
-        initComponent();
-
-        revalidate(); // 如果大小发生变化
-        repaint();
     }
 
     public void updateActions(JsonObject newData) {
@@ -619,13 +612,13 @@ public class MessageComponent extends JBPanel<MessageComponent> implements Messa
         });
     }
 
-    public void setScrollToHighlight(MessageComponent targetComponent,JBScrollPane scrollPane,int startIndex,int endIndex) {
+    public void setScrollToHighlight(MessageComponent targetComponent,int startIndex,int endIndex) {
         // 直接在主线程调用，防抖逻辑交给textPane
         SwingUtilities.invokeLater(() -> {
             if (textArea != null) {
-                textArea.scrollToLine(targetComponent,scrollPane,startIndex);
+                textArea.scrollToLine(targetComponent,globalScrollPane,startIndex);
             }else if (textPane != null) {
-                textPane.scrollToLine(targetComponent,scrollPane,textScrollPane,startIndex);
+                textPane.scrollToLine(targetComponent,globalScrollPane,textScrollPane,startIndex);
             }
         });
     }
@@ -668,6 +661,7 @@ public class MessageComponent extends JBPanel<MessageComponent> implements Messa
     public void cleanup() {
         // 1. 清空对外部类（如父控制器）的回调引用
         setActionCallback(null);
+        setGlobalScrollPane(null);
 
         // 2. 清理 MessageActionsComponent
         if (messageActions != null) {

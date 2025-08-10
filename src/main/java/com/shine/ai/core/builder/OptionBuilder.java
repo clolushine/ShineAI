@@ -7,7 +7,7 @@ import com.shine.ai.ui.PromptGroupComponent;
 import com.shine.ai.util.JsonUtil;
 
 
-public class OfficialBuilder {
+public class OptionBuilder {
     public static String buildShineAI(JsonObject messageObject, MessageGroupComponent mComponent, PromptGroupComponent pComponent) {
         AIAssistantSettingsState stateStore = AIAssistantSettingsState.getInstance();
 
@@ -33,6 +33,9 @@ public class OfficialBuilder {
 
         options.addProperty("online", AISetInfo.get("online").getAsBoolean());
         options.addProperty("vendor", mComponent.getAIVendorKey().toLowerCase());
+
+        options.addProperty("apiId","");
+        options.addProperty("apiKey","");
 
         if (apiKeyItem != null && !apiKeyItem.isJsonNull()) {
             options.addProperty("apiId", apiKeyItem.get("apiId").getAsString());

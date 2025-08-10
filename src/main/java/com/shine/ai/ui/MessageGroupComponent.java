@@ -102,6 +102,9 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
     private List<JsonObject> chatList = new ArrayList<>();
 
     private final int visibleBufferSize = 5;
+    private final int PAGE_SIZE = 20;
+    private int currentPage = 1;
+    private boolean initialLoadComplete = false;
 
     private final Project ThisProject;
     private final MainPanel ThisMainPanel;
@@ -251,9 +254,9 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
         });
 
         // 为 myList 添加尺寸变化监听器
-        myList.addComponentListener(new java.awt.event.ComponentAdapter() {
+        myList.addComponentListener(new ComponentAdapter() {
             @Override
-            public void componentResized(java.awt.event.ComponentEvent e) {
+            public void componentResized(ComponentEvent e) {
                 // 只有在我们主动请求滚动时，才执行操作
                 if (shouldScrollToBottom) {
                     // 此时 myList 的尺寸已经更新，我们现在可以安全地滚动了
@@ -267,6 +270,15 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
 
         // 设置底部栏的背景
         updateActionSouthPanelBg();
+
+//        myScrollPane.getVerticalScrollBar().addAdjustmentListener(e -> {
+//            int value = e.getValue();
+//            int minValue = myScrollPane.getVerticalScrollBar().getMinimum();
+//            if (value <= minValue + 128 && initialLoadComplete && !shouldScrollToBottom) {
+//                // 向上滚动到顶部
+//                loadPreviousData();
+//            }
+//        });
 
 //        JViewport myScrollViewport = myScrollPane.getViewport();
 //        myScrollViewport.addChangeListener(e -> {
@@ -363,6 +375,7 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
 
         MessageComponent messageComponentItem = new MessageComponent(ThisProject,message);
         messageComponentItem.setActionCallback(this); // 设置回调对象引用
+        messageComponentItem.setGlobalScrollPane(myScrollPane); // 设置引用
 
         myList.add(messageComponentItem);
 
@@ -555,6 +568,7 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
 
             MessageComponent messageComponentItem = new MessageComponent(ThisProject,chatItem);
             messageComponentItem.setActionCallback(this); // 设置回调对象引用
+            messageComponentItem.setGlobalScrollPane(myScrollPane); // 设置引用
 
             myList.add(messageComponentItem);
         }
@@ -582,7 +596,19 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
         chatList = chatsManager.findByCollIdAll(collsIt.get("id").getAsString());
 
         updateChatList();
+
+        initialLoadComplete = true;
     }
+
+
+//    private void loadPreviousData() {
+//        currentPage++; // 增加页码，获取下一页更旧的数据
+//        List<JsonObject> olderChats = chatsManager.findByCollId(collsIt.get("id").getAsString(), currentPage, PAGE_SIZE,false);
+//
+//        if (!olderChats.isEmpty()) {
+//            updateChatList();
+//        }
+//    }
 
 //    private void loadInitialChatlist() {
 //        currentChatList.addAll(chatList.subList(Math.max(chatList.size() - PAGE_SIZE, 0), chatList.size()));
@@ -812,7 +838,7 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
     }
 
     public void scrollToTarget(MessageComponent component,int startIndex,int endIndex) {
-        component.setScrollToHighlight(component,myScrollPane,startIndex,endIndex);
+        component.setScrollToHighlight(component,startIndex,endIndex);
     }
 
     public void updateLayout() {

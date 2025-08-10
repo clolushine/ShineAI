@@ -5,8 +5,11 @@ import com.google.gson.JsonObject;
 import com.intellij.notification.impl.ui.NotificationsUtil;
 import com.intellij.openapi.ui.MessageType;
 import com.intellij.ui.BrowserHyperlinkListener;
+import com.intellij.ui.Gray;
 import com.intellij.ui.JBColor;
 import com.intellij.ui.components.JBScrollPane;
+import com.intellij.util.ui.ImageUtil;
+import com.intellij.util.ui.JBUI;
 import com.shine.ai.settings.AIAssistantSettingsState;
 import com.shine.ai.util.BalloonUtil;
 import com.shine.ai.util.HtmlUtil;
@@ -15,10 +18,16 @@ import org.jetbrains.annotations.NotNull;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
 import org.jsoup.parser.Tag;
 import org.jsoup.select.Elements;
+import org.scilab.forge.jlatexmath.TeXConstants;
+import org.scilab.forge.jlatexmath.TeXFormula;
+import org.scilab.forge.jlatexmath.TeXIcon;
+import org.apache.commons.text.StringEscapeUtils;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.text.*;
@@ -27,13 +36,16 @@ import javax.swing.text.html.HTMLEditorKit;
 import javax.swing.text.html.StyleSheet;
 import java.awt.*;
 import java.awt.geom.Rectangle2D;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
 
 public class TextPaneComponent extends JEditorPane {
     private final AIAssistantSettingsState stateStore = AIAssistantSettingsState.getInstance();
@@ -45,6 +57,13 @@ public class TextPaneComponent extends JEditorPane {
     // 正则表达式来匹配Markdown表格的分割线，用于识别表格
     // 例如：|------|:------:|------:|
     private static final Pattern TABLE_SEP_LINE_PATTERN = Pattern.compile("^\\s*\\|?\\s*(:?-+:?(\\s*\\|\\s*:?-+:?)*)?\\s*\\|?\\s*$");
+
+    // ****** 新增：数学公式的正则表达式 ******
+    // 行内公式: $formula$ (不匹配被反斜杠转义的 $)
+    private static final Pattern INLINE_MATH_PATTERN = Pattern.compile("(?<!\\\\)\\$(.*?)(?<!\\\\)\\$", Pattern.DOTALL);
+    // 块级公式: $$formula$$ (不匹配被反斜杠转义的 $$)
+    private static final Pattern BLOCK_MATH_PATTERN = Pattern.compile("(?<!\\\\)\\$\\$(.*?)(?<!\\\\)\\$\\$", Pattern.DOTALL);
+    // ****** 数学公式正则表达式结束 ******
 
     public TextPaneComponent() {
         setEditable(false);
@@ -82,8 +101,8 @@ public class TextPaneComponent extends JEditorPane {
         styleSheet.addRule(".code-container .code-copy{padding:6px;background:#0d1117;border-radius: 10px;color:#00bcbc;padding-right:12px;font-size: 11px;}");
         styleSheet.addRule(".code-container .code-copy .copy-btn{background:#9ad5ef;text-align:left;margin-right:10px;text-decoration: none;color: #000000;cursor: pointer;padding:0 6px;border-radius:22px;}");
         styleSheet.addRule(".code-container .code-copy .copy-btn:hover{text-decoration: none;}");
-        styleSheet.addRule(".code-container pre{padding:2px 8px;margin-bottom:4px; white-space: pre-wrap;word-wrap: break-word;}");
-        styleSheet.addRule(".code-container code{padding:2px 8px;display: block;line-height: 1.2;}");
+        styleSheet.addRule(".code-container pre:not(.math-block){padding:2px 6px;margin-bottom:4px; white-space: pre-wrap;word-wrap: break-word;}");
+        styleSheet.addRule(".code-container code {padding:2px 6px;display: block;line-height: 1.2;}");
 
         // ****** 新增：表格样式 ******
         styleSheet.addRule("table { " +
@@ -105,6 +124,21 @@ public class TextPaneComponent extends JEditorPane {
                 "white-space: nowrap; " + // 防止表头文字换行，可能导致布局问题
                 "}");
         // ****** 表格样式结束 ******
+
+        // ****** 新增：公式样式 ******
+        styleSheet.addRule("pre.math-formula { margin: 2px 4px; vertical-align: bottom; display: inline; }"); // 行内公式
+        styleSheet.addRule("pre.math-block { " +
+                "text-align: center; " + // 居中公式
+                "margin-top: 0.5em; " +
+                "margin-bottom: 0.5em; " +
+                "padding: 0; " +        // 移除 <pre> 默认的内边距
+                "border: none; " +      // 移除 <pre> 默认的边框
+                "background: none; " +   // 移除 <pre> 默认的背景
+                "font-family: inherit; " + // 继承body字体，而不是等宽字体
+                "white-space: pre; " + // 明确保留 <pre> 的不换行行为（非常重要！）
+                "overflow: visible; " + // 确保 <pre> 自身不创建滚动条，而是依赖 JScrollPane
+                "}");
+        // ****** 公式样式结束 ******
 
         HTMLDocument doc = (HTMLDocument) getDocument();
 
@@ -155,6 +189,9 @@ public class TextPaneComponent extends JEditorPane {
 
         // 解析渲染表格
         processMarkdownTables(doc);
+
+        // 解析渲染数学公式
+        processMarkdownFormulas(doc);
 
         setText(doc.body().html());
     }
@@ -332,6 +369,201 @@ public class TextPaneComponent extends JEditorPane {
 
         return table;
     }
+
+    /**
+     * 【核心修改版】
+     * 解析并渲染文档中的Markdown数学公式。
+     * 此版本通过遍历文本节点进行替换，比操作整个HTML字符串更稳健。
+     * @param doc Jsoup文档对象
+     */
+    private void processMarkdownFormulas(Document doc) {
+        // 选择所有可能包含公式的元素
+        Elements elementsToProcess = doc.select("p, h1, h2, h3, h4, h5, h6, li, td, th, blockquote");
+
+        for (Element element : elementsToProcess) {
+            // 获取元素下的所有子节点
+            List<Node> nodes = new ArrayList<>(element.childNodes());
+            for (Node node : nodes) {
+                // 我们只处理文本节点
+                if (node instanceof TextNode textNode) {
+                    String text = textNode.getWholeText();
+
+                    // 优先处理块级公式，因为它可能包含行内公式的定界符
+                    String processedText = processFormulasInText(text, BLOCK_MATH_PATTERN, true);
+
+                    // 接着处理行内公式
+                    processedText = processFormulasInText(processedText, INLINE_MATH_PATTERN, false);
+
+                    // 如果文本内容发生了变化，就替换节点
+                    if (!text.equals(processedText)) {
+                        // Jsoup会自动解析HTML片段并替换原始节点
+                        textNode.replaceWith(new Element("span").html(processedText));
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 辅助方法：在一段纯文本中查找并替换所有公式。
+     *
+     * @param text          纯文本内容
+     * @param pattern       要使用的正则表达式 (行内或块级)
+     * @param isBlock       是否为块级公式
+     * @return              替换了公式图片HTML后的字符串
+     */
+    private String processFormulasInText(String text, Pattern pattern, boolean isBlock) {
+        Matcher matcher = pattern.matcher(text);
+        if (!matcher.find()) {
+            return text; // 没有匹配项，直接返回
+        }
+
+        StringBuilder sb = new StringBuilder();
+        // 重置匹配器以从头开始查找
+        matcher.reset();
+        while (matcher.find()) {
+            String latex = matcher.group(1);
+
+            // 关键：由于我们从TextNode获取文本，Jsoup已经为我们处理了HTML实体解码。
+            // 例如 `&lt;` 已经是 `<`。所以 unescapeHtml4 不再严格需要，但保留也无妨，作为双重保障。
+            latex = preprocessLatexForJLatexMath(latex);
+
+            String htmlImage = renderLatexToHtmlImage(latex, isBlock);
+
+            // 进行替换，并处理好美元符号$的转义
+            matcher.appendReplacement(sb, Matcher.quoteReplacement(htmlImage));
+        }
+        matcher.appendTail(sb);
+        return sb.toString();
+    }
+
+    /**
+     * 预处理从HTML中提取的LaTeX字符串，使其兼容jlatexmath。
+     * 1. 反转义HTML实体（&lt; -> <, &gt; -> >, &amp; -> &）。
+     * 2. 转义LaTeX中的特殊字符 '&' 为 '\&' (如果它不是已经被用于对齐)。
+     *    注意：这里我们简单地替换所有 '&'，这对于简单公式通常有效，
+     *    但如果公式中确实需要对齐符，用户必须在原始Markdown中就写成 '&&' 来表示。
+     *    对于大多数常见数学公式，这种简单替换是安全的。
+     * @param latex 原始LaTeX字符串
+     * @return 预处理后的LaTeX字符串
+     */
+    private String preprocessLatexForJLatexMath(String latex) {
+        // **健壮性改进：首先进行trim，避免因为首尾空格导致的匹配问题**
+        latex = latex.trim();
+
+        // 1. 反转义HTML实体。这是最关键的一步，确保 `jlatexmath` 看到的是原始的 `<>&"` 而不是 `&lt;&gt;&amp;&quot;`
+        // 示例： `\rho &lt; 0` -> `\rho < 0`
+        // 确保你的项目中引入了 org.apache.commons:commons-text 或使用其他HTML实体反转义库。
+        latex = StringEscapeUtils.unescapeHtml4(latex);
+
+        // 2. 转义 LaTeX 中的 '&' 字符为 '\&'，除非它已经被转义为 '\&'。
+        // 这是为了解决 'Character '&' is only available in array mode !'
+        // 注意：这将处理所有非转义的 '&'。如果用户期望真正的对齐符（如在 `array` 环境中），
+        // 建议用户遵循 LaTeX 规范使用 `&` 作为对齐符，或者确保它被适当的 `array` 或 `align` 环境包裹。
+        // 对于大多数公式外面出现而导致的错误，此替换是安全的。
+        // 替换所有非反斜杠开头的 '&'
+        latex = latex.replaceAll("(?<!\\\\)&", "\\\\&"); // 替换不是 \\& 的 &
+
+        // 3. 将常见的数学乘法符号 '*' 替换为 LaTeX 中的 '\cdot'。
+        // 这是为了解决 'Unknown symbol or command or predefined TeXFormula: '*''。
+        // jlatexmath 在数学模式下不默认识别裸露的 '*' 为乘法。
+        // 这里采用一个相对安全的替换策略：只替换未被反斜杠转义的 `*`。
+        // 注意：如果 `*` 有其他特殊用途（例如在字面字符串中），这种替换可能会改变其含义，但对于常见的数学表达式，这是合理的。
+        latex = latex.replaceAll("(?<!\\\\)\\*", "\\\\cdot "); // 替换所有未被转义的`*`为`\cdot`
+        // 注意：`\\` 是Java中表示一个反斜杠，所以`\\\\`是两个反斜杠
+
+        // **健壮性改进：处理 # 符号**
+        // LaTeX 中的 # 是特殊字符（用于宏定义），在公式中通常需要转义。
+        latex = latex.replaceAll("(?<!\\\\)#", "\\\\#"); // 替换不是 \\# 的 #
+
+        // **健壮性改进：处理 % 符号**
+        // LaTeX 中的 % 是注释符，在公式中也可能需要转义。
+        latex = latex.replaceAll("(?<!\\\\)%","\\\\%");
+
+        return latex;
+    }
+
+    /**
+     * 将LaTeX公式渲染为Base64编码的PNG图片，并返回嵌入HTML的<img>标签。
+     *
+     * @param latex    LaTeX公式字符串
+     * @param isBlock  是否为块级公式（影响渲染样式和HTML类）
+     * @return 包含Base64编码图片数据的HTML <img> 标签
+     */
+    private String renderLatexToHtmlImage(String latex, boolean isBlock) {
+        try {
+            if (latex == null || latex.trim().isEmpty()) {
+                return "";
+            }
+
+            // JLaTeXMath 支持两种模式：inline 和 display
+            // display模式适用于块级公式，通常会使公式更大，并在垂直方向上居中
+            TeXFormula formula = new TeXFormula(isBlock ? "\\displaystyle " + latex : latex);
+
+            // 根据 isBlock 参数选择样式
+            int style = isBlock ? TeXConstants.STYLE_DISPLAY : TeXConstants.STYLE_TEXT;
+
+            float baseFontSize = stateStore.CHAT_PANEL_FONT_SIZE;
+            // 1.2f 是一个相对缩放因子，你可以根据需要调整
+            float renderSize = baseFontSize * 1.4f;
+
+            // 使用正确的 style 参数
+            TeXIcon icon = formula.createTeXIcon(style,renderSize,2,new JBColor(Gray.x80, Gray.x8C)); // 公式颜色
+
+            // 确保渲染的颜色匹配主题（如果需要的话，这里简单设为黑色前景，透明背景）
+            icon.setInsets(JBUI.insets(2)); // 在公式内容周围增加内边距
+            // icon.setBackground(new Color(0,0,0,0)); // 透明背景，但Better to render on white and then use JEditorPane's background
+
+            int width = icon.getIconWidth();
+            int height = icon.getIconHeight();
+
+            // 创建BufferedImage来绘制公式，使用ARGB类型支持透明度
+            BufferedImage image = ImageUtil.createImage(width, height, BufferedImage.TYPE_INT_ARGB);
+            Graphics2D g2 = image.createGraphics();
+
+            // 设置高质量渲染提示
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+            g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
+
+            // 填充背景（如果希望透明则不需要）
+            g2.setColor(new JBColor(new Color(0, 0, 0, 0), new Color(0, 0, 0, 0))); // 完全透明
+            g2.fillRect(0, 0, width, height);
+
+            // 绘制公式
+            icon.paintIcon(this, g2, 0, 0); // 'this' 作为 ImageObserver
+            g2.dispose(); // 释放Graphics资源
+
+            // 将BufferedImage转换为PNG并通过Base64编码
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            ImageIO.write(image, "png", bos);
+            byte[] imageBytes = bos.toByteArray();
+            String base64Image = Base64.getEncoder().encodeToString(imageBytes);
+
+            // 构建HTML<img>标签
+            String className = isBlock ? "math-block" : "math-formula";
+            // 使用 StringEscapeUtils.escapeHtml4 确保alt文本安全
+
+            // 注意：JEditorPane对CSS的支持有限，特别是对display:block的<img>
+            // 块级公式最好放在一个<div>中，并对div应用样式
+            if (isBlock) {
+                // <pre> 标签会强制其内部内容不换行，从而让 JEditorPane 正确计算宽度
+                return String.format("<pre>" + "<div class=\"%s\"><img src=\"data:image/png;base64,%s\" alt=\"%s\" /></div>" + "</pre>",
+                        className, base64Image, latex);
+            } else {
+                // 行内公式保持不变
+                return String.format("<pre>" + "<span class=\"%s\"><img src=\"data:image/png;base64,%s\" alt=\"%s\" /></span>" + "</pre>",
+                        className, base64Image, latex);
+            }
+
+
+        } catch (Exception e) {
+            System.err.println("Error rendering LaTeX: " + latex + " Exception: " + e.getMessage());
+            // 渲染失败时，返回带有错误信息的span，并转义原始LaTeX，避免HTML注入
+            return "<span style=\"color: red; background-color: #ffeaea; padding: 2px 4px; border-radius: 3px;\">[Math Error: " + latex + "]</span>";
+        }
+    }
+
 
 
     public void highlightsAll(List<JsonObject> matches, int selectedGlobalMatchIndex) {

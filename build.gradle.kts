@@ -40,12 +40,23 @@ dependencies {
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("cn.hutool:hutool-http:5.8.12")
     implementation("com.squareup.okhttp3:okhttp:4.10.0")
-    implementation("com.alibaba.fastjson2:fastjson2:2.0.20")
     implementation("com.squareup.okhttp3:okhttp-sse:4.10.0")
-    implementation("com.vladsch.flexmark:flexmark-all:0.62.2")
+
+
+    // implementation("com.vladsch.flexmark:flexmark-all:0.62.2")
+    // flexmark 按需引入：
+    implementation("com.vladsch.flexmark:flexmark:0.62.2") // 核心解析器和渲染器
+    implementation("com.vladsch.flexmark:flexmark-util:0.62.2") // 包含 MutableDataSet, Node, Extension 等基础工具类
+    implementation("com.vladsch.flexmark:flexmark-ext-tables:0.62.2") // 表格扩展
+    implementation("com.vladsch.flexmark:flexmark-ext-typographic:0.62.2") // 排版扩展
+    implementation("com.vladsch.flexmark:flexmark-ext-emoji:0.62.2") // Emoji 表情扩展
+
     implementation("net.coobird:thumbnailator:0.4.8")
     implementation("org.xerial:sqlite-jdbc:3.45.1.0")
-//    implementation("cn.hutool:hutool-json:5.8.30")
+    // 数学公式相关
+    implementation("org.scilab.forge:jlatexmath:1.0.7")
+    implementation("org.apache.commons:commons-text:1.10.0")
+
 //    implementation("com.fifesoft:rsyntaxtextarea:3.5.1")
 //    implementation("org.graalvm.polyglot:polyglot:${graalVMVersion}")
 //    implementation("org.graalvm.polyglot:js:${graalVMVersion}")

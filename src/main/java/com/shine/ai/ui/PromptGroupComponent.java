@@ -94,10 +94,20 @@ public class PromptGroupComponent extends JBPanel<PromptGroupComponent> implemen
 
         String content = cPrompt.get("content").getAsString();
         String role = cPrompt.get("role").getAsString();
-        String chatId = cPrompt.get("id").getAsString();
 
-        cPrompt.remove("id");
-        cPrompt.addProperty("promptId",chatId);
+        String promptId = "";
+
+        // 先查看是否是chat
+        if (cPrompt.has("id") && !cPrompt.get("id").isJsonNull()) {
+            promptId = cPrompt.get("id").getAsString();
+            cPrompt.remove("id");
+        }else {
+            promptId = cPrompt.get("promptId").getAsString();
+        }
+
+        // 设置id
+        cPrompt.addProperty("promptId",promptId);
+
         cPrompt.addProperty("icon", StringUtil.equals(role, "user") ?  AIAssistantIcons.ME_PATH : AIAssistantIcons.AI_PATH);
         cPrompt.addProperty("name", role);
         cPrompt.addProperty("isMe", StringUtil.equals(role, "user"));

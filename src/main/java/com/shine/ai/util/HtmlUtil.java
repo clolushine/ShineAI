@@ -1,10 +1,13 @@
 package com.shine.ai.util;
 
+import com.vladsch.flexmark.ext.typographic.TypographicExtension;
 import com.vladsch.flexmark.html.HtmlRenderer;
 import com.vladsch.flexmark.parser.Parser;
 import com.vladsch.flexmark.ext.tables.TablesExtension; // 导入表格扩展
+import com.vladsch.flexmark.ext.emoji.EmojiExtension; // 导入表情
 import com.vladsch.flexmark.util.data.MutableDataSet; // 用于配置选项
 import com.vladsch.flexmark.util.misc.Extension; // 用于扩展列表
+
 import com.vladsch.flexmark.util.ast.Node;
 import org.jsoup.nodes.Element;
 
@@ -16,9 +19,11 @@ public class HtmlUtil {
     public static String md2html(String markdown) {
         // 1. 定义要启用的扩展
         List<Extension> extensions = List.of(
-                TablesExtension.create() // 启用表格扩展
+                TablesExtension.create(), // 启用表格扩展
                 // 如果还需要其他扩展，例如GFM（GitHub Flavored Markdown）的其他特性，可以继续添加
-                // TaskListExtension.create()
+                EmojiExtension.create(),
+                TypographicExtension.create() // 示例：启用排版优化，如智能引号
+
         );
 
         MutableDataSet options = new MutableDataSet();
