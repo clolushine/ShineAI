@@ -250,9 +250,6 @@ public class AIAssistantSettingsState implements PersistentStateComponent<AIAssi
     return setInfo;
   }
 
-  @Deprecated
-  public List<String> customActionsPrefix = new ArrayList<>();
-
   public static AIAssistantSettingsState getInstance() {
     return ApplicationManager.getApplication().getService(AIAssistantSettingsState.class);
   }

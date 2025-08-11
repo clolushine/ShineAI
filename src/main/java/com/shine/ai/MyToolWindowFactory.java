@@ -205,17 +205,17 @@ public class MyToolWindowFactory implements ToolWindowFactory {
 //         });
     }
 
-    private AIToolWindow getCurrentAIToolWindow(String panelName) {
-        AIToolWindow toolWin = null;
-        for (AIToolWindow toolWindow : AIToolWindows) {
-            String contentName = toolWindow.getPanelName();
-            if (StringUtil.equals(contentName, panelName)) {
-                toolWin = toolWindow;
-                break;
-            }
-        }
-        return toolWin;
-    }
+//    private AIToolWindow getCurrentAIToolWindow(String panelName) {
+//        AIToolWindow toolWin = null;
+//        for (AIToolWindow toolWindow : AIToolWindows) {
+//            String contentName = toolWindow.getPanelName();
+//            if (StringUtil.equals(contentName, panelName)) {
+//                toolWin = toolWindow;
+//                break;
+//            }
+//        }
+//        return toolWin;
+//    }
 
     public static void disabledCollectionAction(Boolean disable) {
         if (chatCollectionAction != null) {
