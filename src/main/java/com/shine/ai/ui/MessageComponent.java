@@ -46,7 +46,7 @@ import java.util.*;
 import java.util.List;
 
 
-public class MessageComponent extends JBPanel<MessageComponent> implements MessageActionsComponent.MessageActionCallback {
+public class MessageComponent extends JBPanel<MessageComponent> implements MessageActionsComponent.MessageActionCallback, ImageViewInMessage.ImageActionCallback {
 
     private static final Logger LOG = LoggerFactory.getLogger(MessageComponent.class);
 
@@ -88,7 +88,7 @@ public class MessageComponent extends JBPanel<MessageComponent> implements Messa
 
     public Boolean showActions = true;
 
-    private UpdateActionCallback updateActionCallback; // 持有接口引用
+    private MessageActionCallback messageActionCallback; // 持有接口引用
 
     private MyScrollPane globalScrollPane; // 全局scrollPane引用
 
@@ -97,14 +97,26 @@ public class MessageComponent extends JBPanel<MessageComponent> implements Messa
         BalloonUtil.showBalloon(msg,type,this);
     }
 
-    public interface UpdateActionCallback {
+    @Override
+    public void onPreviewImage(String imageName) {
+        messageActionCallback.onPreviewImage(imageName,getImageList(null));
+    }
+
+    @Override
+    public void onAddImageToEdit(JsonObject fileData) {
+        messageActionCallback.onAddImageToEdit(fileData);
+    }
+
+    public interface MessageActionCallback {
         void onUpdateMessageState(String chatId, JsonObject itemData);
         void onSetProgressBar(boolean isShow);
+        void onPreviewImage(String imageName,JsonArray imageList);
+        void onAddImageToEdit(JsonObject fileData);
     }
 
     // 父组件通过此方法设置回调
-    public void setActionCallback(UpdateActionCallback callback) {
-        this.updateActionCallback = callback;
+    public void setActionCallback(MessageActionCallback callback) {
+        this.messageActionCallback = callback;
     }
 
     // 或者通过setter方法设置
@@ -413,23 +425,17 @@ public class MessageComponent extends JBPanel<MessageComponent> implements Messa
         messagePanel.add(textArea);
 
         // 筛出图片文件
-        List<JsonObject> imageList = attachments.asList().stream()
-                .filter(JsonElement::isJsonObject)
-                .map(JsonElement::getAsJsonObject)
-                .filter(item -> item.has("type") && "image".equals(item.get("type").getAsString()))
-                .toList();
-
-        // 转一份数据给到图片
-        JsonArray imageAttachments = new JsonArray();
-        imageList.forEach(imageAttachments::add);
-
-        for (int i = 0; i < imageList.size(); i++) {
-            JsonObject imageItem = imageList.get(i);
-            ImageViewInMessage imageView = new ImageViewInMessage(null,imageItem.get("fileName").getAsString(), imageAttachments);
+        JsonArray imageAttachments = getImageList(attachments);
+        for (int i = 0; i < imageAttachments.size(); i++) {
+            JsonObject imageItem = imageAttachments.get(i).getAsJsonObject();
+            ImageViewInMessage imageView = new ImageViewInMessage(null,imageItem);
+            imageView.setActionCallback(this);
             messagePanel.add(Box.createRigidArea(new Dimension(0, 8))); // 上间距
             messagePanel.add(imageView);
             if (i != attachments.size() - 1) messagePanel.add(Box.createRigidArea(new Dimension(0, 8))); // 下间距
         }
+
+        // TODO 渲染其他的文件
 
         return messagePanel;
     }
@@ -481,7 +487,7 @@ public class MessageComponent extends JBPanel<MessageComponent> implements Messa
             statusLabel.setForeground(new JBColor(setStatusLabelColor,setStatusLabelColor));
 
             // 通知父组件
-            updateActionCallback.onSetProgressBar(showProgressBar);
+            messageActionCallback.onSetProgressBar(showProgressBar);
 
             switch (status) {
                 case 0:
@@ -609,7 +615,7 @@ public class MessageComponent extends JBPanel<MessageComponent> implements Messa
     }
 
     public void updateContentToState() {
-        updateActionCallback.onUpdateMessageState(chatId,chatItemData);
+        messageActionCallback.onUpdateMessageState(chatId,chatItemData);
     }
 
     public void scrollToBottom() {
@@ -671,6 +677,28 @@ public class MessageComponent extends JBPanel<MessageComponent> implements Messa
             content = textArea.getTextArea().getText();
         }
         return content;
+    }
+
+    public JsonArray getImageList(JsonArray attachments) {
+        JsonArray attachs = attachments;
+        if (attachs == null) {
+            if (chatItemData.has("attachments") && !chatItemData.get("attachments").isJsonNull()) {
+                attachs = chatItemData.get("attachments").getAsJsonArray();
+            }else {
+                attachs = new JsonArray();
+            }
+        }
+        // 筛出图片文件
+        JsonArray imageAttachments = new JsonArray();
+        for(JsonElement attachment: attachs) {
+            if (attachment.isJsonObject()) {
+                JsonObject imageItem = attachment.getAsJsonObject();
+                if (imageItem.has("type") && "image".equals(imageItem.get("type").getAsString())) {
+                    imageAttachments.add(imageItem);
+                }
+            }
+        }
+        return imageAttachments;
     }
 
     /**

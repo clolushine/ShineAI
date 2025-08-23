@@ -86,7 +86,7 @@ public class ImageView extends JPanel {
         buttonPanel.setOpaque(false); // 使面板透明
 
         deleteButton = new IconButton("delete", IconLoader.getIcon("/icons/delete.svg",this.getClass()));
-        deleteButton.setBounds(fixedWidth - 28, - 6, 32, 32);
+        deleteButton.setBounds(fixedWidth - 28, - 6, fixedWidth / 2, fixedHeight / 2);
         buttonPanel.add(deleteButton);
 
         reUploadButton = new IconButton("reUpload", AllIcons.Actions.Refresh);
@@ -96,7 +96,8 @@ public class ImageView extends JPanel {
         add(buttonPanel);
 
         // 缩放图像以适应固定大小
-        imageLabel = new RoundImage(ImageLoader.scaleImage(image,fixedWidth, fixedHeight));
+        imageLabel = new RoundImage(image!=null ? ImageLoader.scaleImage(image,fixedWidth, fixedHeight) : null);
+
         add(imageLabel,BorderLayout.CENTER);
 
         setPreferredSize(new Dimension(fixedWidth, fixedHeight));
@@ -128,8 +129,14 @@ public class ImageView extends JPanel {
         remove(imageLabel);
         if (img != null) {
             imageLabel = new RoundImage(ImageLoader.scaleImage(img,fixedWidth, fixedHeight));
-            add(imageLabel,BorderLayout.CENTER);
+        }else {
+            Image errorImg = ImgUtils.loadImageFromSource(AIAssistantIcons.IMAGE_ERROR_PATH);
+            if (errorImg != null) {
+                imageLabel = new RoundImage(ImageLoader.scaleImage(errorImg,fixedWidth, fixedHeight));
+            }
         }
+
+        add(imageLabel,BorderLayout.CENTER);
     }
 
     public void setMessageGroupCom(MessageGroupComponent messageGroupCom) {

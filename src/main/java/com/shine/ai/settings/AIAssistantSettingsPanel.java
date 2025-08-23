@@ -49,7 +49,7 @@ import java.util.*;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import static com.shine.ai.MyToolWindowFactory.*;
+import static com.shine.ai.vendors.AIVendors.*;
 
 public class AIAssistantSettingsPanel implements Configurable, Disposable {
     private MessageBusConnection connection;

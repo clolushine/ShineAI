@@ -29,7 +29,7 @@ public class AIAssistantIcons {
     public static String AI_PATH = "/images/ai.png";
 
     public static String UPLOAD_ERROR_PATH = "/icons/upload-error.png";
-    public static String IMAGE_ERROR_PATH = "/images/image-error.png";
+    public static String IMAGE_ERROR_PATH = "./images/image-error.png";
 
     public static String ME_URL = "https://vom3yqczvirljfap.public.blob.vercel-storage.com/unishine/light-vEbeBTz3FPnbHA2OyBa2LVMUN3SNBn.jpg";
     public static String AI_URL = "https://vom3yqczvirljfap.public.blob.vercel-storage.com/unishine/robot-CJ5I8dHYpXSHJLnQZhle7ZDZ4uasZD.png";

@@ -62,7 +62,7 @@ public class ShineAIUtil {
     private static final ReentrantLock REFRESH_TOKEN_LOCK = new ReentrantLock();
     private static final Condition TOKEN_REFRESHED = REFRESH_TOKEN_LOCK.newCondition();
     private static volatile boolean isTokenRefreshInProgress = false; // volatile 保证多线程可见性
-    private static final int MAX_RETRIES = 3; // 最大重试次数
+    private static final int MAX_RETRIES = 2; // 最大重试次数
 
     public static String request(String url, String method, Object options, Integer retry) {
         // validate input retry count, ensure it's not null and within bounds
@@ -115,7 +115,7 @@ public class ShineAIUtil {
             }
 
             // --- TOKEN 过期处理逻辑 ---
-            if (response.contains("JwtTokenInvalid") || response.contains("JwtTokenSignatureMismatched") || response.contains("JwtTokenExpired")) {
+            if (response.contains("JwtTokenInvalid") || response.contains("JwtTokenExpired")) {
                 if (currentRetryCount < MAX_RETRIES - 1) { // 允许重试，但不超过最大重试次数前的一次
                     // 进入同步区，确保只有一个线程处理刷新
                     REFRESH_TOKEN_LOCK.lock();
@@ -286,7 +286,7 @@ public class ShineAIUtil {
         }
     }
 
-    public static JsonArray getAIModels(String vendor,String url,JComponent component) {
+    public static JsonArray getAIModels(String vendor,String url) {
         JsonObject params = new JsonObject();
         JsonArray models = new JsonArray();
 
@@ -314,7 +314,7 @@ public class ShineAIUtil {
         return models;
     }
 
-    public static JsonObject uploadImg(Image image, JComponent component) {
+    public static JsonObject uploadImg(Image image) {
         JsonObject returnData = new JsonObject();
 
         // 1. 构建 form-data 参数
@@ -325,7 +325,7 @@ public class ShineAIUtil {
             formData.put("uid", state.getUserInfo().get("id").getAsString());
         }
         try {
-            File imageFile = ImgUtils.convertImageByThumbnails(image,"png",GeneratorUtil.generateWithUUID() + "_image",0.6f);
+            File imageFile = ImgUtils.convertImageByThumbnails(image,"png",GeneratorUtil.generateWithUUID() + "_image",0.68f);
             if (imageFile != null) {
                 FileResource fileResource = new FileResource(new File(imageFile.getPath()), imageFile.getName());
                 returnData.addProperty("fileName",imageFile.getName());
@@ -357,7 +357,7 @@ public class ShineAIUtil {
         return returnData;
     }
 
-    public static String getImageUrl(String fileName, JComponent component) {
+    public static String getImageUrl(String fileName) {
         JsonObject params = new JsonObject();
         String imageUrl = "";
 

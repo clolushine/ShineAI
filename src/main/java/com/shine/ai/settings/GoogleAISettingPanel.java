@@ -52,6 +52,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static com.shine.ai.MyToolWindowFactory.*;
+import static com.shine.ai.vendors.AIVendors.*;
 
 public class GoogleAISettingPanel implements Configurable, Disposable {
     private Project project;
@@ -269,7 +270,7 @@ public class GoogleAISettingPanel implements Configurable, Disposable {
             JsonArray localModels = DBUtil.getLLMsByKey(Google_AI_KEY);
 
             assert modelsCombobox != null;
-            JsonArray models = ShineAIUtil.getAIModels(Google_AI_KEY,Google_AI_LLM_API,refreshModelsButton);
+            JsonArray models = ShineAIUtil.getAIModels(Google_AI_KEY,Google_AI_LLM_API);
 
             int beforeLength = localModels.size();
             int afterLength = models.size();

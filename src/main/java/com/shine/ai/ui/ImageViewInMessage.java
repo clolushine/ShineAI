@@ -19,7 +19,7 @@
 
 package com.shine.ai.ui;
 
-import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import com.intellij.icons.AllIcons;
 import com.intellij.openapi.ui.MessageType;
 import com.intellij.util.ImageLoader;
@@ -34,12 +34,10 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 
-import static com.shine.ai.MyToolWindowFactory.previewImageDialog;
-
 public class ImageViewInMessage extends JPanel {
     private Image image;
     private String imageName;
-    private JsonArray imageGroup;
+    private JsonObject fileData;
     private int fixedW = 64;
     private int fixedH = 64;
     private int fixedSize = 288;
@@ -48,15 +46,27 @@ public class ImageViewInMessage extends JPanel {
     private final JPopupMenu popupMenu;
 
     private RoundImage imageLabel; // 将 imageLabel 提升为成员变量
-    public ImageViewInMessage(Image image, String fileName, JsonArray imageGroup) {
+
+    private ImageActionCallback imageActionCallback; // 持有接口引用
+
+    public interface ImageActionCallback {
+        void onPreviewImage(String imageName);
+        void onAddImageToEdit(JsonObject imageName);
+    }
+
+    // 父组件通过此方法设置回调
+    public void setActionCallback(ImageActionCallback callback) {
+        this.imageActionCallback = callback;
+    }
+
+    public ImageViewInMessage(Image image, JsonObject fileData) {
         if (image != null) {
             this.image = image;
-        }else if (!fileName.isBlank()) {
-            this.imageName = fileName;
-            this.image = ImgUtils.loadImageFormLocalCache(fileName);
+        }else if (!fileData.isJsonNull()) {
+            this.imageName = fileData.get("fileName").getAsString();
+            this.image = ImgUtils.loadImageFormLocalCache(this.imageName);
+            this.fileData = fileData;
         }
-
-        this.imageGroup = imageGroup; // 接收一个图片组数据
 
         // 兜底显示个错误图片
         if (this.image == null) {
@@ -86,7 +96,7 @@ public class ImageViewInMessage extends JPanel {
                 if (e.getButton() == MouseEvent.BUTTON3 && !isError) {
                     popupMenu.show(imageLabel, e.getX(), e.getY());
                 }else if (e.getButton() == MouseEvent.BUTTON1 && !isError) {
-                    previewImageDialog.showDialog(getImageName(),getImageGroup());
+                    imageActionCallback.onPreviewImage(getImageName());
                 }
             }
         });
@@ -100,8 +110,8 @@ public class ImageViewInMessage extends JPanel {
         return this.imageName;
     }
 
-    public JsonArray getImageGroup() {
-        return this.imageGroup;
+    public JsonObject getFileData() {
+        return this.fileData;
     }
 
     private int getFixedH(Image image,int fixedWidth) {
@@ -126,7 +136,12 @@ public class ImageViewInMessage extends JPanel {
             BalloonUtil.showBalloon(balloonStr,balloonType,this);
         });
 
-        JMenuItem itemSave = new JMenuItem("Save as to",AllIcons.Actions.Download);
+        JMenuItem itemEdit = new JMenuItem("Add",AllIcons.Actions.AddFile);
+        itemEdit.addActionListener(e -> {
+            imageActionCallback.onAddImageToEdit(getFileData());
+        });
+
+        JMenuItem itemSave = new JMenuItem("Save",AllIcons.Actions.Download);
         itemSave.addActionListener(e -> {
             ImgUtils.saveAsToImage(this.image);
         });
@@ -134,6 +149,7 @@ public class ImageViewInMessage extends JPanel {
         JMenuItem itemPreview = getJMenuItem();
 
         popupMenu.add(itemCopy);
+        popupMenu.add(itemEdit);
         popupMenu.add(itemSave);
         popupMenu.add(itemPreview);
 
@@ -143,7 +159,7 @@ public class ImageViewInMessage extends JPanel {
     private @NotNull JMenuItem getJMenuItem() {
         JMenuItem itemPreview = new JMenuItem("Preview",AllIcons.Actions.Preview);
         itemPreview.addActionListener(e -> {
-            previewImageDialog.showDialog(getImageName(),getImageGroup());
+            imageActionCallback.onPreviewImage(getImageName());
         });
         return itemPreview;
     }

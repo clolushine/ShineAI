@@ -21,13 +21,11 @@ package com.shine.ai;
 
 import com.google.gson.JsonObject;
 import com.intellij.openapi.actionSystem.*;
-import com.intellij.openapi.options.Configurable;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Key;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowFactory;
 import com.intellij.ui.content.*;
-import com.shine.ai.icons.AIAssistantIcons;
 import com.shine.ai.message.MsgEntryBundle;
 import com.shine.ai.settings.*;
 import com.shine.ai.ui.action.ChatCollectionAction;
@@ -39,69 +37,12 @@ import org.jetbrains.annotations.NotNull;
 import java.util.*;
 import java.util.List;
 
+import static com.shine.ai.vendors.AIVendors.MAPPINGS;
+
 
 public class MyToolWindowFactory implements ToolWindowFactory {
 
     public static final Key ACTIVE_CONTENT = Key.create("ActiveContent");
-
-    public static final String CLOUDFLARE_AI_CONTENT_NAME = "CloudflareAI";
-    public static final String CLOUDFLARE_AI_KEY = "CLOUDFLARE";
-    public static final String CLOUDFLARE_AI_NAME = "CF AI";
-    public static final String CLOUDFLARE_AI_ICON = AIAssistantIcons.CF_AI_URL;
-    public static final String CLOUDFLARE_AI_API = "/ai/aiChat";
-    public static final String CLOUDFLARE_AI_LLM_API = "/ai/aiModels";
-    public static final String CLOUDFLARE_SETTING_CLASS_NAME = CFAISettingPanel.class.getName();
-
-    public static final String Google_AI_CONTENT_NAME = "GoogleAI";
-    public static final String Google_AI_KEY = "GOOGLE";
-    public static final String Google_AI_NAME = "GEMINI";
-    public static final String Google_AI_ICON = AIAssistantIcons.GOOGLE_AI_URL;
-    public static final String Google_AI_API = "/gem/geminiChat";
-    public static final String Google_AI_LLM_API = "/gem/gems";
-    public static final String Google_SETTING_CLASS_NAME = GoogleAISettingPanel.class.getName();
-
-    public static final String GROQ_AI_CONTENT_NAME = "GroqAI";
-    public static final String GROQ_AI_KEY = "GROQ";
-    public static final String GROQ_AI_NAME = "GROQ";
-    public static final String GROQ_AI_ICON = AIAssistantIcons.GROQ_AI_URL;
-    public static final String GROQ_AI_API = "/gpt/gptChat";
-    public static final String GROQ_AI_LLM_API = "/gpt/models";
-    public static final String GROQ_SETTING_CLASS_NAME = GroqAISettingPanel.class.getName();
-
-    // 新增AI
-    public static final String OpenAI_CONTENT_NAME = "OpenAI";
-    public static final String OpenAI_KEY = "OPENAI";
-    public static final String OpenAI_NAME = "OPENAI";
-    public static final String OpenAI_ICON = AIAssistantIcons.OPENAI_URL;
-    public static final String OpenAI_AI_API = "/gpt/gptChat";
-    public static final String OpenAI_LLM_API = "/gpt/models";
-    public static final String OpenAI_SETTING_CLASS_NAME = OpenAISettingPanel.class.getName();
-
-    public static final String Anthropic_AI_CONTENT_NAME = "AnthropicAI";
-    public static final String Anthropic_AI_KEY = "ANTHROPIC";
-    public static final String Anthropic_AI_NAME = "ANTHR";
-    public static final String Anthropic_AI_ICON = AIAssistantIcons.ANTHROPIC_AI_URL;
-    public static final String Anthropic_AI_API = "/gpt/gptChat";
-    public static final String Anthropic_AI_LLM_API = "/gpt/models";
-    public static final String Anthropic_SETTING_CLASS_NAME = AnthropicAISettingPanel.class.getName();
-
-    public static final String OpenRouter_AI_CONTENT_NAME = "OpenRouterAI";
-    public static final String OpenRouter_AI_KEY = "OPENROUTER";
-    public static final String OpenRouter_AI_NAME = "ROUTER";
-    public static final String OpenRouter_AI_ICON = AIAssistantIcons.OPENROUTER_AI_URL;
-    public static final String OpenRouter_AI_API = "/gpt/gptChat";
-    public static final String OpenRouter_AI_LLM_API = "/gpt/models";
-    public static final String OpenRouter_SETTING_CLASS_NAME = OpenRouterAISettingPanel.class.getName();
-
-
-    public static final Map<String, Class<? extends Configurable>> MAPPINGS = new HashMap<>() {{
-        put(CLOUDFLARE_SETTING_CLASS_NAME, CFAISettingPanel.class);
-        put(Google_SETTING_CLASS_NAME, GoogleAISettingPanel.class);
-        put(GROQ_SETTING_CLASS_NAME, GroqAISettingPanel.class);
-        put(OpenAI_SETTING_CLASS_NAME, OpenAISettingPanel.class);
-        put(Anthropic_SETTING_CLASS_NAME, AnthropicAISettingPanel.class);
-        put(OpenRouter_SETTING_CLASS_NAME, OpenRouterAISettingPanel.class);
-    }};
 
     // 定义一个用于存储 Action 实例的 Key
     public static ChatCollectionAction chatCollectionAction = null;
@@ -188,34 +129,7 @@ public class MyToolWindowFactory implements ToolWindowFactory {
         actionList.add(new SettingAction(MsgEntryBundle.message("action.settings")));
         toolWindow.setTitleActions(actionList);
 
-
-        // 监听 ToolWindow 的激活事件
-        // Option 1: ToolWindowManagerListener (更全局)
-//         project.getMessageBus().connect().subscribe(ToolWindowManagerListener.TOPIC, new ToolWindowManagerListener() {
-//             @Override
-//             public void toolWindowShown(@NotNull ToolWindow activatedToolWindow) {
-//                 if (activatedToolWindow == toolWindow) { // 确保是你的 ToolWindow
-//                     String displayName = toolWindow.getContentManager().getSelectedContent().getDisplayName();
-//                     AIToolWindow toolWin = getCurrentAIToolWindow(displayName);
-//                     if (toolWin != null) {
-//
-//                     }
-//                 }
-//             }
-//         });
     }
-
-//    private AIToolWindow getCurrentAIToolWindow(String panelName) {
-//        AIToolWindow toolWin = null;
-//        for (AIToolWindow toolWindow : AIToolWindows) {
-//            String contentName = toolWindow.getPanelName();
-//            if (StringUtil.equals(contentName, panelName)) {
-//                toolWin = toolWindow;
-//                break;
-//            }
-//        }
-//        return toolWin;
-//    }
 
     public static void disabledCollectionAction(Boolean disable) {
         if (chatCollectionAction != null) {

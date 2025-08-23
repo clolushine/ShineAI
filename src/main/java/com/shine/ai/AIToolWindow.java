@@ -33,7 +33,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 
-import static com.shine.ai.MyToolWindowFactory.MAPPINGS;
+import static com.shine.ai.vendors.AIVendors.*;
 
 public class AIToolWindow {
     private final MainPanel mainPanel;

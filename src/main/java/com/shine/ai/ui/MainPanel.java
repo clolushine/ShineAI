@@ -26,8 +26,6 @@ import com.shine.ai.util.StringUtil;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
-import java.awt.event.InputEvent;
-import java.awt.event.KeyEvent;
 import java.util.concurrent.ExecutorService;
 
 public class MainPanel {
@@ -38,7 +36,6 @@ public class MainPanel {
 
     private OnePixelSplitter splitter;
     private final String panelName;
-    private JRootPane lastRootPane; // 添加一个成员变量来保存 rootPane
 
     private final Project myProject;
     private final Class<?> AIPanel;
@@ -95,24 +92,6 @@ public class MainPanel {
     }
 
     public void disposeContent() {
-        // 清理快捷键绑定
-        if (lastRootPane != null) {
-            InputMap inputMap = lastRootPane.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
-            ActionMap actionMap = lastRootPane.getActionMap();
-
-            // 通过 put null 来移除绑定
-            inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_F, InputEvent.CTRL_DOWN_MASK), null);
-            actionMap.put("find-text", null);
-
-            inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_D, InputEvent.CTRL_DOWN_MASK), null);
-            actionMap.put("chat-setting", null);
-
-            inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_A, InputEvent.CTRL_DOWN_MASK | InputEvent.ALT_DOWN_MASK), null);
-            actionMap.put("ai-setting", null);
-
-            lastRootPane = null; // 清理引用
-        }
-
         if (contentPanel != null) {
             contentPanel.dispose();
             contentPanel = null; // 显式地将引用置空

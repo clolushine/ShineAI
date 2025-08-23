@@ -86,7 +86,7 @@ public class MessageActionsComponent extends JPanel {
         FlowLayout flowLayout = new FlowLayout(FlowLayout.LEFT,0,0);
         setLayout(flowLayout); // 从左到右排列
 
-        editAction = getEditAction(_chatItem);
+        editAction = getEditAction(_chatItem,attachments);
         add(editAction);
         actionButtons.add(editAction);
 
@@ -146,10 +146,11 @@ public class MessageActionsComponent extends JPanel {
         return trashAction;
     }
 
-    private @NotNull IconButton getEditAction(JsonObject chatItem) {
+    private @NotNull IconButton getEditAction(JsonObject chatItem,JsonArray attachments) {
         IconButton editAction = new IconButton("edit",AllIcons.Actions.Edit);
         editAction.addActionListener(e -> {
             getMainPanel().getInputTextArea().setContent(chatItem.get("content").getAsString());
+            getMainPanel().getContentPanel().addImageListFromCache(attachments);
             getMainPanel().getInputTextArea().getTextarea().requestFocus();
         });
         return editAction;

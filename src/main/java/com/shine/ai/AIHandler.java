@@ -67,8 +67,6 @@ public class AIHandler extends AbstractHandler {
 
     public OkHttpClient createHttpClient() throws NoSuchAlgorithmException, KeyManagementException {
         OkHttpClient.Builder builder = new OkHttpClient.Builder()
-                // 防止 NAT/防火墙在空闲时切断，开启心跳 (服务器如果不发送心跳，这里会自己发 ping)
-                .pingInterval(30, TimeUnit.SECONDS)
                 .connectTimeout(state.requestTimeout,TimeUnit.MILLISECONDS)
                 .readTimeout(state.requestTimeout,TimeUnit.MILLISECONDS)
                 .writeTimeout(state.requestTimeout,TimeUnit.MILLISECONDS);

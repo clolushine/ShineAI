@@ -51,6 +51,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static com.shine.ai.MyToolWindowFactory.*;
+import static com.shine.ai.vendors.AIVendors.*;
 
 public class AnthropicAISettingPanel implements Configurable, Disposable {
     private Project project;
@@ -263,7 +264,7 @@ public class AnthropicAISettingPanel implements Configurable, Disposable {
             JsonArray localModels = DBUtil.getLLMsByKey(Anthropic_AI_KEY);
 
             assert modelsCombobox != null;
-            JsonArray models = ShineAIUtil.getAIModels(Anthropic_AI_KEY,Anthropic_AI_LLM_API,refreshModelsButton);
+            JsonArray models = ShineAIUtil.getAIModels(Anthropic_AI_KEY,Anthropic_AI_LLM_API);
 
             int beforeLength = localModels.size();
             int afterLength = models.size();

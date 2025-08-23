@@ -40,22 +40,18 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.shine.ai.MyToolWindowFactory.*;
+import static com.shine.ai.vendors.AIVendors.*;
 
 @State(
         name = "com.shine.ai.settings.AIAssistantSettingsState",
         storages = @Storage("shineAISettingsPlugin.xml")
 )
 public class AIAssistantSettingsState implements PersistentStateComponent<AIAssistantSettingsState> {
-  // 最大存储空间大小 (MB) -  根据你的需求设置
-  public static final double MAX_STORAGE_SIZE_MB = 1024;
-
   public static final String[] promptsComboboxRolesString = {"user", "system", "assistant"};
 
   public int CHAT_PANEL_FONT_SIZE = 14;
 
   public Integer requestTimeout = 60000;
-  public Boolean enableHighlightCode = false;
   public Integer promptsPos = 1;
   public Boolean enableLineWarp = true;
   public Boolean enableAvatar = true;

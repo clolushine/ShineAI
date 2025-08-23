@@ -70,8 +70,9 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.shine.ai.MyToolWindowFactory.*;
+import static com.shine.ai.vendors.AIVendors.*;
 
-public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implements NullableComponent, Disposable, MessageComponent.UpdateActionCallback {
+public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implements NullableComponent, Disposable, MessageComponent.MessageActionCallback {
     private final AIAssistantSettingsState stateStore = AIAssistantSettingsState.getInstance();
 
     public final JPanel infoTopPanel = new JPanel(new BorderLayout());
@@ -918,6 +919,59 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
         addImage(imageList);
     }
 
+    private void handleAddImageFromCache(JsonObject fileData) {
+        if (!checkImagesLen()) return;
+        if (!fileData.isJsonNull()) {
+            String fileName = fileData.get("fileName").getAsString();
+            String url = fileData.has("url") ? fileData.get("url").getAsString() : null;
+            boolean isAdded = checkImageAdded(fileName);
+
+            if (!isAdded) {
+                ImageView imagePanel = new ImageView(null);
+                imagePanel.setMessageGroupCom(this); // 加上一个全局引用
+
+                imagePanel.setImage(url,fileName,fileData);
+
+                imagePanel.getDeleteButton().addActionListener(e -> {
+                    removeImage(imagePanel);
+                });
+
+                uploadListPanel.add(imagePanel);
+
+                uploadListPanel.updateUI();
+            }
+
+        }
+    }
+
+    public void addImageListFromCache(JsonArray attachments) {
+        removeUploadList();
+
+        for (JsonElement attachment: attachments) {
+            if (attachment.isJsonObject()) {
+                JsonObject attachmentItem = attachment.getAsJsonObject();
+
+                if (attachmentItem.has("type") && "image".equals(attachmentItem.get("type").getAsString())) {
+
+                    String fileName = attachmentItem.get("fileName").getAsString();
+                    String url = attachmentItem.has("url") ? attachmentItem.get("url").getAsString() : null;
+
+                    ImageView imagePanel = new ImageView(null);
+                    imagePanel.setMessageGroupCom(this); // 加上一个全局引用
+
+                    imagePanel.setImage(url,fileName,attachmentItem);
+
+                    imagePanel.getDeleteButton().addActionListener(e -> {
+                        removeImage(imagePanel);
+                    });
+
+                    uploadListPanel.add(imagePanel);
+                }
+            }
+        }
+        uploadListPanel.updateUI();
+    }
+
     private void addImage(List<BufferedImage> imageList) {
         for (BufferedImage image: imageList) {
             ImageView imagePanel = new ImageView(image);
@@ -942,7 +996,7 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
             @Override
             protected JsonObject doInBackground() {
                 imagePanel.setLoading(true);
-                return ShineAIUtil.uploadImg(img,imagePanel);
+                return ShineAIUtil.uploadImg(img);
             }
             @Override
             protected void done() {
@@ -965,11 +1019,36 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
     }
 
     private Boolean checkImagesLen() {
-        if (uploadListPanel.getComponentCount() > 9) {
+        if (uploadListPanel.getComponentCount() >= 9) {
             BalloonUtil.showBalloon("Cannot add more images.", MessageType.WARNING,uploadListPanel);
             return false;
         }
         return true;
+    }
+
+    private Boolean checkImageAdded(String fileName) {
+        boolean isAdded = false;
+
+        if (fileName.isBlank()) {
+            BalloonUtil.showBalloon("Add this image error", MessageType.ERROR,uploadListPanel);
+            return true;
+        }
+
+        for (int i = 0; i < uploadListPanel.getComponentCount(); i++) {
+            Component component = uploadListPanel.getComponent(i);
+            if (component instanceof ImageView ImageComponent) {
+                if (StringUtil.equals(ImageComponent.getName(),fileName)) {
+                    isAdded = true;
+                    break;
+                }
+            }
+        }
+
+        if (isAdded) {
+            BalloonUtil.showBalloon("Please do not add it repeatedly.", MessageType.WARNING,uploadListPanel);
+        }
+
+        return isAdded;
     }
 
     private void removeImage(JComponent imageItem) {
@@ -1091,5 +1170,15 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
     public void onSetProgressBar(boolean isShow) {
         progressBar.setIndeterminate(isShow);
         progressBar.setVisible(isShow);
+    }
+
+    @Override
+    public void onPreviewImage(String imageName, JsonArray imageList) {
+        previewImageDialog.showDialog(imageName,imageList);
+    }
+
+    @Override
+    public void onAddImageToEdit(JsonObject fileData) {
+        handleAddImageFromCache(fileData);
     }
 }

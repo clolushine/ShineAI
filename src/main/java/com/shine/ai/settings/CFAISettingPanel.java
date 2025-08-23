@@ -47,13 +47,12 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static com.shine.ai.MyToolWindowFactory.*;
+import static com.shine.ai.vendors.AIVendors.*;
 
 public class CFAISettingPanel implements Configurable, Disposable {
     private Project project;
@@ -244,7 +243,7 @@ public class CFAISettingPanel implements Configurable, Disposable {
             JsonArray localModels = DBUtil.getLLMsByKey(CLOUDFLARE_AI_KEY);
 
             assert modelsCombobox != null;
-            JsonArray models = ShineAIUtil.getAIModels(CLOUDFLARE_AI_KEY,CLOUDFLARE_AI_LLM_API,refreshModelsButton);
+            JsonArray models = ShineAIUtil.getAIModels(CLOUDFLARE_AI_KEY,CLOUDFLARE_AI_LLM_API);
 
             int beforeLength = localModels.size();
             int afterLength = models.size();
