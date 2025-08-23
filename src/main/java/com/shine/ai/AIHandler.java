@@ -186,8 +186,6 @@ public class AIHandler extends AbstractHandler {
                         component.updateMessage(JsonParser.parseString(data).getAsJsonObject());
                     } catch (Exception e) {
                         handleStreamErrorData(component,mainPanel);
-                    } finally {
-                        mainPanel.getExecutorService().shutdown();
                     }
                 }
 
