@@ -73,6 +73,7 @@ public class ChatCollectionDialog extends JDialog {
     private JLabel openNewChatHelpLabel;
     private JLabel openHistoryChatHelpLabel;
     private JPanel ListScrollPanel;
+    private JLabel collectionCountLabel;
 
     public ChatCollectionDialog(Project project) {
         this.project = project;
@@ -86,11 +87,7 @@ public class ChatCollectionDialog extends JDialog {
         setDefaultCloseOperation(DISPOSE_ON_CLOSE); // 设置关闭操作
         contentPane.setBorder(JBUI.Borders.empty(12,32,32,32));
 
-        contentPane.registerKeyboardAction(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                dispose();
-            }
-        }, KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+        contentPane.registerKeyboardAction(e -> dispose(), KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
 
         assert openNewChatButton != null;
         openNewChatButton.setIcon(AllIcons.General.Add);
@@ -103,6 +100,18 @@ public class ChatCollectionDialog extends JDialog {
         collectionScrollPane.setBorder(JBUI.Borders.empty());
         ListScrollPanel.add(collectionScrollPane);
         collectionScrollPane.getVerticalScrollBar().setAutoscrolls(true);
+
+        collectionList.addContainerListener(new ContainerListener() {
+            @Override
+            public void componentAdded(ContainerEvent e) {
+                collectionCountLabel.setText("total：" + collectionList.getComponentCount() + " collections");
+            }
+
+            @Override
+            public void componentRemoved(ContainerEvent e) {
+                collectionCountLabel.setText("total：" + collectionList.getComponentCount() + " collections");
+            }
+        });
 
         addWindowListener(new WindowAdapter() {
             @Override

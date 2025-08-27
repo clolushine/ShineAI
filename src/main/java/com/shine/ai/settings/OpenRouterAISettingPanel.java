@@ -47,6 +47,8 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ContainerEvent;
+import java.awt.event.ContainerListener;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -78,6 +80,7 @@ public class OpenRouterAISettingPanel implements Configurable, Disposable {
     private JPanel apikeyListPanel;
     private JButton addApikeyButton;
     private JLabel apikeyDataHelpLabel;
+    private JLabel apikeyCountLabel;
     private static List<JsonObject> thisApiKeys;
 
     public OpenRouterAISettingPanel() {
@@ -113,13 +116,25 @@ public class OpenRouterAISettingPanel implements Configurable, Disposable {
         streamSpeedField.addChangeListener(e -> {
             streamSpeedValueLabel.setText(String.valueOf(streamSpeedField.getValue()));
         });
+
+        apikeyList.addContainerListener(new ContainerListener() {
+            @Override
+            public void componentAdded(ContainerEvent e) {
+                apikeyCountLabel.setText("total：" + apikeyList.getComponentCount() + " keys");
+            }
+
+            @Override
+            public void componentRemoved(ContainerEvent e) {
+                apikeyCountLabel.setText("total：" + apikeyList.getComponentCount() + " keys");
+            }
+        });
     }
 
     @Override
     public void reset() {
         AIAssistantSettingsState state = AIAssistantSettingsState.getInstance();
 
-        JsonObject settingInfo = state.getAISettingInfo(OpenRouter_AI_CONTENT_NAME);
+        JsonObject settingInfo = state.getAISettingInfo(getDisplayName());
 
         enableStreamCheckBox.setSelected(settingInfo.get("aiStream").getAsBoolean());
         streamSpeedField.setValue(settingInfo.get("streamSpeed").getAsInt());
@@ -143,7 +158,7 @@ public class OpenRouterAISettingPanel implements Configurable, Disposable {
     public boolean isModified() {
         AIAssistantSettingsState state = AIAssistantSettingsState.getInstance();
 
-        JsonObject settingInfo = state.getAISettingInfo(OpenRouter_AI_CONTENT_NAME);
+        JsonObject settingInfo = state.getAISettingInfo(getDisplayName());
 
         return !settingInfo.get("aiStream").getAsBoolean() == enableStreamCheckBox.isSelected() ||
                 !(settingInfo.get("streamSpeed").getAsInt() == streamSpeedField.getValue()) ||
@@ -160,7 +175,7 @@ public class OpenRouterAISettingPanel implements Configurable, Disposable {
         setInfo.addProperty("streamSpeed",streamSpeedField.getValue());
         setInfo.addProperty("aiModel",(String) modelsCombobox.getSelectedItem());
 
-        state.setAISettingInfo(OpenRouter_AI_CONTENT_NAME,setInfo);
+        state.setAISettingInfo(getDisplayName(),setInfo);
 
         refreshInfo();
     }
@@ -192,7 +207,7 @@ public class OpenRouterAISettingPanel implements Configurable, Disposable {
 
     private void createApikeyList() {
         assert apikeyListPanel != null;;
-        apikeyListPanel.setPreferredSize(new Dimension(apikeyListPanel.getWidth(),192));
+        apikeyListPanel.setPreferredSize(new Dimension(apikeyListPanel.getWidth(),224));
         apikeyScrollPane.setBorder(JBUI.Borders.empty());
         apikeyListPanel.add(apikeyScrollPane);
         apikeyScrollPane.getVerticalScrollBar().setAutoscrolls(true);
@@ -283,7 +298,7 @@ public class OpenRouterAISettingPanel implements Configurable, Disposable {
             BalloonUtil.showBalloon(notifyString,notifyColor,modelsCombobox);
             if (!models.isEmpty()) DBUtil.setLLMsByKey(OpenRouter_AI_KEY,models);
             modelsCombobox.setModel(modelsToComboBoxModel());
-            JsonElement currentModel = stateStore.getAISettingInfoByKey(OpenRouter_AI_CONTENT_NAME,"aiModel");
+            JsonElement currentModel = stateStore.getAISettingInfoByKey(getDisplayName(),"aiModel");
 
             if (!StringUtil.equals(currentModel.getAsString(), "")) {
                 if (OtherUtil.isValidModelInComboBox(modelsCombobox, currentModel.getAsString())) { // 使用辅助方法验证
@@ -328,7 +343,7 @@ public class OpenRouterAISettingPanel implements Configurable, Disposable {
     private void addNewApikey(JComponent _component) {
         AIAssistantSettingsState stateStore = AIAssistantSettingsState.getInstance();
 
-        if (apikeyList.getComponentCount() >= 10) {
+        if (apikeyList.getComponentCount() >= 32) {
             BalloonUtil.showBalloon("Cannot add more apikey！！！", MessageType.ERROR,apikeyListPanel);
             return;
         }
@@ -338,21 +353,25 @@ public class OpenRouterAISettingPanel implements Configurable, Disposable {
         apikeyInfo.addProperty("apiId","");
         apikeyInfo.addProperty("apiKey","");
         apikeyInfo.addProperty("weight",1);
-        apikeyList.add(new AIApikeyComponent(apikeyInfo,thisApiKeys,_component,OpenRouter_AI_CONTENT_NAME,false),0);
-        thisApiKeys.add(0,apikeyInfo);
+        apikeyList.add(new AIApikeyComponent(apikeyInfo,thisApiKeys,_component,getDisplayName(),false));
+        thisApiKeys.add(apikeyInfo);
         // 这里需要写入state
-        stateStore.setAISettingInfoByKey(OpenRouter_AI_CONTENT_NAME,"apiKeys", JsonUtil.getJsonArray(thisApiKeys));
+        stateStore.setAISettingInfoByKey(getDisplayName(),"apiKeys", JsonUtil.getJsonArray(thisApiKeys));
         updateLayout();
-        scrollTop();
+        scrollBottom();
     }
 
     public void initApiKeysPanel() {
+        // 先清除
+        apikeyList.removeAll();
+
         if (!thisApiKeys.isEmpty()) {
             for (JsonObject item : thisApiKeys) {
-                AIApikeyComponent apiKeyItem = new AIApikeyComponent(item,thisApiKeys,apikeyList,OpenRouter_AI_CONTENT_NAME,false);
+                AIApikeyComponent apiKeyItem = new AIApikeyComponent(item,thisApiKeys,apikeyList,getDisplayName(),false);
                 apikeyList.add(apiKeyItem);
             }
             updateLayout();
+            scrollBottom();
         }
     }
 
@@ -361,12 +380,12 @@ public class OpenRouterAISettingPanel implements Configurable, Disposable {
         apikeyList.repaint();
     }
 
-    public void scrollTop() {
+    public void scrollBottom() {
         SwingUtilities.invokeLater(() -> { // 在Swing事件调度线程上执行
             JScrollBar verticalScrollBar = apikeyScrollPane.getVerticalScrollBar();
-            int min = verticalScrollBar.getMinimum();
-            if (min <= 0) { // 避免在内容为空的情况下的异常
-                verticalScrollBar.setValue(min);
+            int max = verticalScrollBar.getMaximum();
+            if (max > 0) { // 避免在内容为空的情况下的异常
+                verticalScrollBar.setValue(max);
             }
         });
     }
