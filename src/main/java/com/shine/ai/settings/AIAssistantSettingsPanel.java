@@ -162,7 +162,7 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
         signLink.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                BrowserUtil.browse("https://unishine.pages.dev/#/pages/login/register");
+                BrowserUtil.browse("https://ai.5205203.xyz/#/pages/login/register");
             }
         });
 

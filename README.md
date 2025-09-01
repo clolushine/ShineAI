@@ -97,7 +97,7 @@ ShineAI 是一个个人项目，您的支持对我意义重大！
 
 ### ✨ UniShine for H5
 
-UniShine 的 H5 版本地址：[https://unishine.pages.dev/#/pages/index/index](https://unishine.pages.dev/#/pages/index/index)
+UniShine 的 H5 版本地址：[https://ai.5205203.xyz/#/pages/index/index](https://ai.5205203.xyz/#/pages/index/index)
 
 ---
 
