@@ -93,9 +93,10 @@ public class ImageViewInMessage extends JPanel {
         imageLabel.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                if (e.getButton() == MouseEvent.BUTTON3 && !isError) {
+                if (isError) return;
+                if (e.getButton() == MouseEvent.BUTTON3) {
                     popupMenu.show(imageLabel, e.getX(), e.getY());
-                }else if (e.getButton() == MouseEvent.BUTTON1 && !isError) {
+                }else if (e.getButton() == MouseEvent.BUTTON1 && e.getClickCount() == 2) {
                     imageActionCallback.onPreviewImage(getImageName());
                 }
             }

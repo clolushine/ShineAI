@@ -83,14 +83,6 @@ public class AIToolWindow {
         return panelName;
     }
 
-    public void refreshInfo() {
-        mainPanel.refreshInfo();
-    }
-
-    public void refreshMessages() {
-        mainPanel.refreshMessages();
-    }
-
     private void initShortcutKeyTool(){
         SwingUtilities.invokeLater(() -> {
 

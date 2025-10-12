@@ -53,8 +53,6 @@ public class SendAction extends AnAction {
 
     private final AIAssistantSettingsState stateStore = AIAssistantSettingsState.getInstance();
 
-    private final AIHandler AIHandler = new AIHandler();
-
     private String data;
 
     @Override
@@ -161,6 +159,8 @@ public class SendAction extends AnAction {
         MessageComponent AIAnswer = contentPanel.getLastItem(null);
         try {
             ExecutorService executorService = mainPanel.getExecutorService();
+            AIHandler AIHandler = new AIHandler();
+
             // Request the server
             if (!getAISetInfo(mainPanel).get("aiStream").getAsBoolean()) {
                 executorService.submit(() -> {
