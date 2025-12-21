@@ -58,7 +58,7 @@ public class ShineAIUtil {
     public static Integer timeout = state.requestTimeout;
 
     public static boolean isLoginDialogShown = false; // 静态变量，跟踪弹窗状态
-    // --- 新增的并发控制变量 ---
+
     private static final ReentrantLock REFRESH_TOKEN_LOCK = new ReentrantLock();
     private static final Condition TOKEN_REFRESHED = REFRESH_TOKEN_LOCK.newCondition();
     private static volatile boolean isTokenRefreshInProgress = false; // volatile 保证多线程可见性
@@ -124,13 +124,7 @@ public class ShineAIUtil {
                             // 我是第一个发现Token过期并需要刷新的线程
                             isTokenRefreshInProgress = true;
                             // 释放锁，以便刷新Token的操作可以进行，并且不会阻塞其他等待的线程
-                            // 如果refreshUserToken本身内部不需要这个锁，可以考虑在这种情况下暂时解锁
-                            // 但是为了确保原子性，通常是让刷新操作在锁定状态下完成
-                            // 如果 refreshUserToken 的网络请求很长，这会阻塞所有等待线程直到完成
-                            // 实际应用中，如果 refreshUserToken 内部是耗时操作，
-                            // 更好的做法是将其放在另一个线程或 CompletableFuture 中，
-                            // 然后再 signalAll。但为了简化，这里直接执行。
-                            REFRESH_TOKEN_LOCK.unlock(); // 暂时释放锁
+                            REFRESH_TOKEN_LOCK.unlock();
                             try {
                                 refreshUserToken(currentRetryCount); // 执行Token刷新
                             } finally {
@@ -163,7 +157,6 @@ public class ShineAIUtil {
                         }
                     }
                     // Token已刷新（或者等待并获得了新Token），使用新的Token重试请求
-                    // 注意：这里 retryCount 应该加1，因为这是一次重试（因为Token过期了）
                     return request(url, method, options, currentRetryCount + 1);
                 } else {
                     // 达到最大重试次数，不再尝试刷新或重试
@@ -325,7 +318,7 @@ public class ShineAIUtil {
             formData.put("uid", state.getUserInfo().get("id").getAsString());
         }
         try {
-            File imageFile = ImgUtils.convertImageByThumbnails(image,"png",GeneratorUtil.generateWithUUID() + "_image",0.68f);
+            File imageFile = ImgUtils.convertImageByThumbnails(image,"png",GeneratorUtil.generateWithUUID() + "_image",0.78f);
             if (imageFile != null) {
                 FileResource fileResource = new FileResource(new File(imageFile.getPath()), imageFile.getName());
                 returnData.addProperty("fileName",imageFile.getName());

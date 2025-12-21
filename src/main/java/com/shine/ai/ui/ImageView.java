@@ -119,6 +119,7 @@ public class ImageView extends JPanel {
             reUploadButton.setVisible(true);
         } else {
             this.isUploaded = true;
+            reUploadButton.setVisible(false);
             img = ImgUtils.loadImageFormLocalCache(name);
         }
 

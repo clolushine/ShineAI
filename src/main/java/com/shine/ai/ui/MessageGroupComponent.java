@@ -1086,7 +1086,9 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
     }
 
     public ExecutorService getExecutorService() {
-        executorService = Executors.newFixedThreadPool(1);
+        if (executorService == null || executorService.isShutdown()) {
+            executorService = Executors.newFixedThreadPool(1);
+        }
         return executorService;
     }
 
@@ -1154,6 +1156,11 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
 
     @Override
     public void dispose() {
+        if (executorService != null) {
+            executorService.shutdownNow();
+            executorService = null;
+        }
+
         findMatchDialog.dispose();
 
         removeInfo();
