@@ -113,7 +113,7 @@ public class TextPaneComponent extends JEditorPane {
 
         // styleSheet.loadRules(new InputStreamReader(cssURL.openStream()), this.getClass().getResource("/css/darcula.min.css")); // 使用URL作为ref参数
         styleSheet.addRule("body{padding: 0;margin:0;max-width: 100%}");
-        styleSheet.addRule(".content{ padding: 10px; color: #000000; border-radius: 8px;background: #ffffff;}");
+        styleSheet.addRule(".content{ display: block; padding: 10px; color: #000000; border-radius: 8px;background: #ffffff;}");
 
         // pre code样式
         styleSheet.addRule(".code-container{color:#888;border-radius: 10px;background: #2b2b2b;}");
@@ -159,46 +159,26 @@ public class TextPaneComponent extends JEditorPane {
                 "}");
         // ****** 公式样式结束 ******
 
-        HTMLDocument doc = (HTMLDocument) getDocument();
+        HTMLDocument document = (HTMLDocument) getDocument();
 
+        // 内容区容器节点
         try {
-            textPaneKit.insertHTML(doc, doc.getLength(), String.format("<div class=\"content\">%s</div>", " "), 0, 0, null);
+            textPaneKit.insertHTML(document, document.getLength(), String.format("<div class=\"content\">%s</div>", " "), 0, 0, null);
         } catch (BadLocationException | IOException e) {
             // 处理异常，例如打印错误信息或显示默认内容
             setText("Error rendering content: " + e.getMessage());
         }
 
-        // StyledDocument document = getStyledDocument();
-
-        // try {
-        //    textPaneKit.insertHTML((HTMLDocument) document, document.getLength(), String.format("<div class=\"content\">%s</div>", " "), 0, 0, null);
-        // } catch (BadLocationException | IOException e) {
-            // 处理异常，例如打印错误信息或显示默认内容
-        //    setText("Error rendering content: " + e.getMessage());
-        //}
+        setCaretPosition(document.getLength());
     }
 
     public HTMLEditorKit getTextPaneKit() {
         return textPaneKit;
     }
 
-    public void updateContent(String content) {
-        if (content.isBlank()) return;
-        // 修改转换结果的htmlString值 用于正确给界面增加鼠标闪烁的效果
-        // 判断markdown中代码块标识符的数量是否为偶数
-        if (content.split("```").length % 2 != 0) {
-            String msgCtx = content;
-            if (content.toCharArray()[msgCtx.length() - 1] != '\n') {
-                msgCtx += '\n';
-            }
-            updateText(msgCtx);
-        } else {
-            updateText(content);
-        }
-    }
-
-
     public void updateText(String content) {
+        HTMLDocument document = (HTMLDocument) getDocument();
+
         String htmlContent = String.format("<div class=\"content\">%s</div>", HtmlUtil.md2html(content));
 
         Document doc = Jsoup.parse(htmlContent);
@@ -213,6 +193,8 @@ public class TextPaneComponent extends JEditorPane {
         processMarkdownFormulas(doc);
 
         setText(doc.body().html());
+
+        setCaretPosition(document.getLength());
     }
 
     public String getPlainText() {
@@ -242,7 +224,7 @@ public class TextPaneComponent extends JEditorPane {
         // 将 copy-btn 添加到 code-copy
         codeCopy.appendChild(copyBtn);
 
-        String language = HtmlUtil.extractLanguage(element); //HtmlUtil.extractLanguage 需要你自己实现
+        String language = HtmlUtil.extractLanguage(element);
         codeCopy.attr("lang", language);
         codeCopy.appendText(language); // 添加语言文本
 

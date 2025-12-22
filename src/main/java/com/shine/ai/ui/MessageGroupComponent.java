@@ -848,11 +848,7 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
     }
 
     public void scrollToBottomAfterLayout() {
-        // 1. 升起“旗帜”，告诉监听器，下一次尺寸变化后需要滚动。
         shouldScrollToBottom = true;
-        // 2. 触发重新布局。这会使 myList 的尺寸发生变化，
-        //    从而触发我们上面添加的 componentResized 事件。
-        //    只需要 revalidate 最外层的容器即可。
         revalidate();
         repaint();
     }
@@ -1086,9 +1082,7 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
     }
 
     public ExecutorService getExecutorService() {
-        if (executorService == null || executorService.isShutdown()) {
-            executorService = Executors.newFixedThreadPool(1);
-        }
+        executorService = Executors.newFixedThreadPool(1);
         return executorService;
     }
 

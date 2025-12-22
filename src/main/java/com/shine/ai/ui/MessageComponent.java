@@ -401,7 +401,7 @@ public class MessageComponent extends JBPanel<MessageComponent> implements Messa
 
         textScrollPane = new MyScrollPane(textPane, ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
 
-        textPane.updateContent(content);
+        textPane.updateText(content);
 
         SwingUtilities.invokeLater(()-> textScrollPane.getHorizontalScrollBar().setValue(0));
 
@@ -524,9 +524,9 @@ public class MessageComponent extends JBPanel<MessageComponent> implements Messa
     }
 
     public void updateMessageContent(String content) {
-        chatItemData.addProperty("content",content);
-        // debouncedUpdateContent(content);
-        setContent(content);
+        var fullContent = chatItemData.get("content").getAsString() + content;
+        chatItemData.addProperty("content",fullContent);
+        setContent(fullContent);
     }
 
     public void initActions() {
@@ -553,6 +553,10 @@ public class MessageComponent extends JBPanel<MessageComponent> implements Messa
         String event = dck.get("event").getAsString();
         JsonObject message = new JsonObject();
         String withContent = "";
+
+        // 消息状态
+        int status = chatItemData.get("status").getAsInt();
+
         if (dck.has("message")) {
             message = dck.get("message").getAsJsonObject();
         }
@@ -563,16 +567,15 @@ public class MessageComponent extends JBPanel<MessageComponent> implements Messa
         }
         switch (event) {
             case "message":
+                status = 2;
                 if (message.has("content")) {
-                    updateMessageContent(chatItemData.get("content").getAsString() + message.get("content").getAsString());
+                    updateMessageContent(message.get("content").getAsString());
                 }
                 // 处理一下带finishReason的
                 updateWithContent(withContent);
-                updateStatusContent(2);
             break;
             case "done":
-                updateStatusContent(1);
-                updateContentToState();
+                status = 1;
                 break;
             case "error":
                 if (chatItemData.get("content").getAsString().isBlank() && !message.isJsonNull()) {
@@ -581,26 +584,24 @@ public class MessageComponent extends JBPanel<MessageComponent> implements Messa
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
-                    updateStatusContent(-2);
+                    status = -2;
                 } else {
-                    updateStatusContent(-1);
+                    status = -1;
                 }
-                updateContentToState();
                 break;
             case "abort":
-                updateStatusContent(-3);
-                updateContentToState();
+                status = -3;
                 break;
             case "message:done":
+                status = 1;
                 if (message.has("content")) {
                     updateMessageContent(message.get("content").getAsString());
                 }
                 // 处理一下带finishReason的
                 updateWithContent(withContent);
-                updateStatusContent(1);
-                updateContentToState();
             break;
             case "message:err":
+                status = -2;
                 if (message.isJsonObject() && !message.has("content")) {
                     try {
                         updateMessageContent(String.format("```json\n%s\n```",JsonUtil.prettyJson(message)));
@@ -608,9 +609,13 @@ public class MessageComponent extends JBPanel<MessageComponent> implements Messa
                         throw new RuntimeException(e);
                     }
                 }
-                updateStatusContent(-2);
-                updateContentToState();
                 break;
+        }
+
+        updateStatusContent(status);
+
+        if (status != 2) {
+            updateContentToState();
         }
     }
 
@@ -663,7 +668,7 @@ public class MessageComponent extends JBPanel<MessageComponent> implements Messa
         if (content.isBlank()) return;
         // 直接在主线程调用，防抖逻辑交给textPane
         SwingUtilities.invokeLater(() -> {
-            textPane.updateContent(content);
+            textPane.updateText(content);
             textScrollPane.getHorizontalScrollBar().setValue(0);
             scrollToBottom();
         });
