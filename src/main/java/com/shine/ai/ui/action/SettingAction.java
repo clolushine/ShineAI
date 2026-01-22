@@ -1,6 +1,6 @@
 /*
- * ShineAI - An IntelliJ IDEA plugin for AI services.
- * Copyright (C) 2025 Shine Zhong
+ * ShineAI - An IntelliJ IDEA plugin.
+ * Copyright (C) 2026 Shine Zhong
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

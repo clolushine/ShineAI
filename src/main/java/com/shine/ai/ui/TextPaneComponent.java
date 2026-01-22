@@ -1,6 +1,6 @@
 /*
- * ShineAI - An IntelliJ IDEA plugin for AI services.
- * Copyright (C) 2025 Shine Zhong
+ * ShineAI - An IntelliJ IDEA plugin.
+ * Copyright (C) 2026 Shine Zhong
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -108,58 +108,14 @@ public class TextPaneComponent extends JEditorPane {
         });
         NotificationsUtil.configureHtmlEditorKit(this, true);
 
-        textPaneKit = (HTMLEditorKit) getEditorKit();
-        StyleSheet styleSheet = textPaneKit.getStyleSheet();
-
-        // styleSheet.loadRules(new InputStreamReader(cssURL.openStream()), this.getClass().getResource("/css/darcula.min.css")); // 使用URL作为ref参数
-        styleSheet.addRule("body{padding: 0;margin:0;max-width: 100%}");
-        styleSheet.addRule(".content{ display: block; padding: 10px; color: #000000; border-radius: 8px;background: #ffffff;}");
-
-        // pre code样式
-        styleSheet.addRule(".code-container{color:#888;border-radius: 10px;background: #2b2b2b;}");
-        styleSheet.addRule(".code-container .code-copy{padding:6px;background:#0d1117;border-radius: 10px;color:#00bcbc;padding-right:12px;font-size: 11px;}");
-        styleSheet.addRule(".code-container .code-copy .copy-btn{background:#9ad5ef;text-align:left;margin-right:10px;text-decoration: none;color: #000000;cursor: pointer;padding:0 6px;border-radius:22px;}");
-        styleSheet.addRule(".code-container .code-copy .copy-btn:hover{text-decoration: none;}");
-        styleSheet.addRule(".code-container pre:not(.math-block){padding:2px 6px;margin-bottom:4px; white-space: pre-wrap;word-wrap: break-word;}");
-        styleSheet.addRule(".code-container code {padding:2px 6px;display: block;line-height: 1.2;}");
-
-        // ****** 新增：表格样式 ******
-        styleSheet.addRule("table { " +
-                "border-collapse: collapse; " + // 合并边框
-                "width: 100%; " + // 宽度占满父容器
-                "margin: 1em 0; " + // 上下边距
-                "font-size: 0.9em; " + // 字体略小
-                "border-radius: 8px; " + // 圆角
-                "overflow: hidden; " + // 确保内容不溢出圆角
-                "}");
-        styleSheet.addRule("th, td { " +
-                "padding: 8px 12px; " +
-                "text-align: left; " + // 默认左对齐，也可以根据分隔线中的冒号调整
-                "border: 1px solid #555; " + // 边框颜色
-                "vertical-align: top; " + // 顶部对齐
-                "}");
-        styleSheet.addRule("th { " +
-                "font-weight: bold; " +
-                "white-space: nowrap; " + // 防止表头文字换行，可能导致布局问题
-                "}");
-        // ****** 表格样式结束 ******
-
-        // ****** 新增：公式样式 ******
-        styleSheet.addRule("pre.math-formula { margin: 2px 4px; vertical-align: bottom; display: inline; }"); // 行内公式
-        styleSheet.addRule("pre.math-block { " +
-                "text-align: center; " + // 居中公式
-                "margin-top: 0.5em; " +
-                "margin-bottom: 0.5em; " +
-                "padding: 0; " +        // 移除 <pre> 默认的内边距
-                "border: none; " +      // 移除 <pre> 默认的边框
-                "background: none; " +   // 移除 <pre> 默认的背景
-                "font-family: inherit; " + // 继承body字体，而不是等宽字体
-                "white-space: pre; " + // 明确保留 <pre> 的不换行行为（非常重要！）
-                "overflow: visible; " + // 确保 <pre> 自身不创建滚动条，而是依赖 JScrollPane
-                "}");
-        // ****** 公式样式结束 ******
-
         HTMLDocument document = (HTMLDocument) getDocument();
+
+        textPaneKit = (HTMLEditorKit) getEditorKit();
+
+        boolean isBright = stateStore.themeVal == 0 ? JBColor.isBright() : stateStore.themeVal == 1;
+
+        // 设置主题颜色
+        changeTextPaneTheme(isBright);
 
         // 内容区容器节点
         try {
@@ -174,6 +130,73 @@ public class TextPaneComponent extends JEditorPane {
 
     public HTMLEditorKit getTextPaneKit() {
         return textPaneKit;
+    }
+
+    public void changeTextPaneTheme(boolean isBright) {
+        StyleSheet themeStyle = textPaneKit.getStyleSheet();
+
+        // styleSheet.loadRules(new InputStreamReader(cssURL.openStream()), this.getClass().getResource("/css/darcula.min.css")); // 使用URL作为ref参数
+        themeStyle.addRule("body{padding: 0;margin:0;max-width: 100%}");
+        themeStyle.addRule(
+                String.format(".content{ display: block; padding: 10px; color: %s; border-radius: 16px;background: %s;}",
+                        isBright ? "#000000" : "#a3a3a3",
+                        isBright ? "#ffffff" : "#4e5253"
+                ));
+
+        // pre code样式
+        themeStyle.addRule(
+                String.format(".code-container{color: %s;border-radius: 10px;background: %s;}",
+                        isBright ? "#000000" : "#888888",
+                        isBright ? "#f0f4f9" : "#2b2b2b"
+                ));
+
+        themeStyle.addRule(
+                String.format(".code-container .code-copy{padding:6px;color: %s;background: %s;border-radius: 10px;padding-right:12px;font-size: 11px;}",
+                        isBright ? "#000000" : "#00bcbc",
+                        isBright ? "#dfdfdf" : "#0d1117"
+                ));
+        themeStyle.addRule(".code-container .code-copy .copy-btn{background:#9ad5ef;text-align:left;margin-right:10px;text-decoration: none;color: #000000;cursor: pointer;padding:0 6px;border-radius:22px;}");
+        themeStyle.addRule(".code-container .code-copy .copy-btn:hover{text-decoration: none;}");
+        themeStyle.addRule(".code-container pre:not(.math-block){padding:2px 6px;margin-bottom:4px; white-space: pre-wrap;word-wrap: break-word;}");
+        themeStyle.addRule(".code-container code {padding:2px 6px;display: block;line-height: 1.2;}");
+
+        // ****** 新增：表格样式 ******
+        themeStyle.addRule("table { " +
+                "border-collapse: collapse; " + // 合并边框
+                "width: 100%; " + // 宽度占满父容器
+                "margin: 1em 0; " + // 上下边距
+                "font-size: 0.9em; " + // 字体略小
+                "border-radius: 8px; " + // 圆角
+                "overflow: hidden; " + // 确保内容不溢出圆角
+                "}");
+
+        String thtdBorderStyle = isBright ? "border: 1px solid #999999; " : "border: 1px solid #292929; ";
+        themeStyle.addRule("th, td { " +
+                "padding: 8px 12px; " +
+                "text-align: left; " + // 默认左对齐，也可以根据分隔线中的冒号调整
+                thtdBorderStyle + // 边框颜色
+                "vertical-align: top; " + // 顶部对齐
+                "}");
+        themeStyle.addRule("th { " +
+                "font-weight: bold; " +
+                "white-space: nowrap; " + // 防止表头文字换行，可能导致布局问题
+                "}");
+        // ****** 表格样式结束 ******
+
+        // ****** 新增：公式样式 ******
+        themeStyle.addRule("pre.math-formula { margin: 2px 4px; vertical-align: bottom; display: inline; }"); // 行内公式
+        themeStyle.addRule("pre.math-block { " +
+                "text-align: center; " + // 居中公式
+                "margin-top: 0.5em; " +
+                "margin-bottom: 0.5em; " +
+                "padding: 0; " +        // 移除 <pre> 默认的内边距
+                "border: none; " +      // 移除 <pre> 默认的边框
+                "background: none; " +   // 移除 <pre> 默认的背景
+                "font-family: inherit; " + // 继承body字体，而不是等宽字体
+                "white-space: pre; " + // 明确保留 <pre> 的不换行行为（非常重要！）
+                "overflow: visible; " + // 确保 <pre> 自身不创建滚动条，而是依赖 JScrollPane
+                "}");
+        // ****** 公式样式结束 ******
     }
 
     public void updateText(String content) {
@@ -572,7 +595,7 @@ public class TextPaneComponent extends JEditorPane {
         highlighter.removeAllHighlights();
 
         Color defaultHighlightColor = new JBColor(new Color(255, 255, 0, 180), new Color(255, 255, 0, 180)); // 明亮黄
-        Color selectedBackgroundColor = new JBColor(new Color(80, 180, 255, 255), new Color(80, 180, 255, 255)); // 明显蓝
+        Color selectedBackgroundColor = new JBColor(new Color(74, 190, 218, 255), new Color(74, 190, 218, 255)); // 明显蓝
         Color selectedBorderColor = new JBColor(new Color(255, 69, 0), new Color(255, 69, 0)); // 橙红
 
         Highlighter.HighlightPainter defaultPainter = new DefaultHighlighter.DefaultHighlightPainter(defaultHighlightColor);

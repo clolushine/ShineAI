@@ -1,6 +1,6 @@
 /*
- * ShineAI - An IntelliJ IDEA plugin for AI services.
- * Copyright (C) 2025 Shine Zhong
+ * ShineAI - An IntelliJ IDEA plugin.
+ * Copyright (C) 2026 Shine Zhong
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,7 +36,7 @@ public class PreviewImagePane extends JPanel {
     private Point dragStartViewPos; // 拖动起始视口位置
 
     public PreviewImagePane() {
-        setBackground(new JBColor(Color.DARK_GRAY, Color.LIGHT_GRAY)); // 设置背景色，以区分图片边界
+        setBackground(new JBColor(Color.GRAY, Color.LIGHT_GRAY)); // 设置背景色，以区分图片边界
 
         // 添加鼠标滚轮监听器，用于缩放
         addMouseWheelListener(new MouseAdapter() {

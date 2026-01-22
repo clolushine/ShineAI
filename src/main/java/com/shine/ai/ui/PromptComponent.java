@@ -1,6 +1,6 @@
 /*
- * ShineAI - An IntelliJ IDEA plugin for AI services.
- * Copyright (C) 2025 Shine Zhong
+ * ShineAI - An IntelliJ IDEA plugin.
+ * Copyright (C) 2026 Shine Zhong
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -138,7 +138,7 @@ public class PromptComponent extends JBPanel<PromptComponent> {
         RoundPanel messagePanel = new RoundPanel();
         messagePanel.setLayout(new BoxLayout(messagePanel,BoxLayout.Y_AXIS));
 
-        textArea = new MessageTextareaComponent(content,isMe ? Color.decode("#b4d6ff") : Color.decode("#ffffff"));
+        textArea = new MessageTextareaComponent(content,isMe);
 
         messagePanel.add(textArea);
         return messagePanel;

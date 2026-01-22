@@ -1,6 +1,6 @@
 /*
- * ShineAI - An IntelliJ IDEA plugin for AI services.
- * Copyright (C) 2025 Shine Zhong
+ * ShineAI - An IntelliJ IDEA plugin.
+ * Copyright (C) 2026 Shine Zhong
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -207,6 +207,9 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
             public void lookAndFeelChanged(@NotNull LafManager source) {
                 updateActionSouthPanelBg(); // 主题变化时更新背景
                 updateInputTextAreaUI(); // 更新输入框ui
+
+                // 修改主题色
+                changeMessagePanelTheme();
             }
         });
 
@@ -339,6 +342,16 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
         initAISetInfo();
         initChatList();
         refreshListCounts();
+    }
+
+    public void changeMessagePanelTheme() {
+        boolean isBright = stateStore.themeVal == 0 ? JBColor.isBright() : stateStore.themeVal == 1;
+        for (int i = 0; i < myList.getComponentCount(); i++) { // 从后往前循环
+            Component component = myList.getComponent(i);
+            if (component instanceof MessageComponent messageComponent) {
+                messageComponent.changeTheme(isBright);
+            }
+        }
     }
 
     public void setItemsDisabledRerunAndTrash(Boolean disabled) {

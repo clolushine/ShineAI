@@ -1,6 +1,6 @@
 /*
- * ShineAI - An IntelliJ IDEA plugin for AI services.
- * Copyright (C) 2025 Shine Zhong
+ * ShineAI - An IntelliJ IDEA plugin.
+ * Copyright (C) 2026 Shine Zhong
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,8 +26,8 @@ import java.awt.*;
 import java.awt.geom.RoundRectangle2D;
 
 public class RoundPanel extends JComponent implements Disposable {
-    private int arcWidth = 6;
-    private int arcHeight = 6;
+    private int arcWidth = 8;
+    private int arcHeight = 8;
 
     public RoundPanel(LayoutManager borderLayout) {
         super();

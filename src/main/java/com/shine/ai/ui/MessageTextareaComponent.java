@@ -1,6 +1,6 @@
 /*
- * ShineAI - An IntelliJ IDEA plugin for AI services.
- * Copyright (C) 2025 Shine Zhong
+ * ShineAI - An IntelliJ IDEA plugin.
+ * Copyright (C) 2026 Shine Zhong
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,8 +38,22 @@ public class MessageTextareaComponent extends JPanel {
 
     private final JTextArea textArea;
 
-    public MessageTextareaComponent(String content,Color background) {
-        this.background = background;
+    public MessageTextareaComponent(String content,Boolean isMe) {
+        boolean isBright = stateStore.themeVal == 0 ? JBColor.isBright() : stateStore.themeVal == 1;
+
+        this.background = stateStore.themeVal == 0 ?
+                (isMe ? new JBColor(Color.decode("#b4d6ff"), Color.decode("#292929")) : new JBColor(Color.decode("#ffffff"), Color.decode("#4e5253")))
+                :
+                (stateStore.themeVal == 1 ?
+                        (isMe ? Color.decode("#b4d6ff") : Color.decode("#ffffff"))
+                        :
+                        (isMe ? Color.decode("#292929") : Color.decode("#4e5253"))
+                );
+
+        Color foregroundColor = stateStore.themeVal == 0 ?
+                new JBColor(Color.decode("#000000"), Color.decode("#999999"))
+                :
+                (stateStore.themeVal == 1 ? Color.decode("#000000") : Color.decode("#999999"));
 
         setDoubleBuffered(true);
         setOpaque(true);
@@ -51,8 +65,9 @@ public class MessageTextareaComponent extends JPanel {
         textArea.setLineWrap(true);
         textArea.setWrapStyleWord(true);
         textArea.setFont(new Font("Microsoft YaHei", Font.PLAIN,stateStore.CHAT_PANEL_FONT_SIZE));
-        textArea.setForeground(new JBColor(Color.decode("#060606"), Color.decode("#000000")));
-        textArea.setBorder(JBUI.Borders.empty(6,12));
+
+        textArea.setForeground(foregroundColor);
+        textArea.setBorder(JBUI.Borders.empty(10,12));
 
         Document document = textArea.getDocument();
 
@@ -72,7 +87,7 @@ public class MessageTextareaComponent extends JPanel {
         g2.setColor(this.background); // 使用面板的背景颜色
 
         // 绘制圆角矩形
-        g2.fill(new RoundRectangle2D.Double(0, 0, getWidth(), getHeight(), 8, 8));
+        g2.fill(new RoundRectangle2D.Double(0, 0, getWidth(), getHeight(), 16, 16));
 
         g2.dispose();
     }
@@ -82,7 +97,7 @@ public class MessageTextareaComponent extends JPanel {
         highlighter.removeAllHighlights();
 
         Color defaultHighlightColor = new JBColor(new Color(255, 255, 0, 180), new Color(255, 255, 0, 180)); // 明亮黄
-        Color selectedBackgroundColor = new JBColor(new Color(80, 180, 255, 255), new Color(80, 180, 255, 255)); // 明显蓝
+        Color selectedBackgroundColor = new JBColor(new Color(74, 190, 218, 255), new Color(74, 190, 218, 255)); // 明显蓝
         Color selectedBorderColor = new JBColor(new Color(255, 69, 0), new Color(255, 69, 0)); // 橙红
 
         Highlighter.HighlightPainter defaultPainter = new DefaultHighlighter.DefaultHighlightPainter(defaultHighlightColor);

@@ -1,6 +1,6 @@
 /*
- * ShineAI - An IntelliJ IDEA plugin for AI services.
- * Copyright (C) 2025 Shine Zhong
+ * ShineAI - An IntelliJ IDEA plugin.
+ * Copyright (C) 2026 Shine Zhong
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -421,7 +421,7 @@ public class MessageComponent extends JBPanel<MessageComponent> implements Messa
     public RoundPanel MessageTextareaComponent (String content,JsonArray attachments) {
         RoundPanel messagePanel = new RoundPanel();
         messagePanel.setLayout(new BoxLayout(messagePanel,BoxLayout.Y_AXIS));
-        textArea = new MessageTextareaComponent(content,Color.decode("#b4d6ff"));
+        textArea = new MessageTextareaComponent(content,true);
         messagePanel.add(textArea);
 
         // 筛出图片文件
@@ -631,6 +631,16 @@ public class MessageComponent extends JBPanel<MessageComponent> implements Messa
         }
     }
 
+    public void changeTheme(boolean isBright) {
+        SwingUtilities.invokeLater(() -> {
+            if (textPane != null) {
+                textPane.changeTextPaneTheme(isBright);
+                textPane.updateText(chatItemData.get("content").getAsString());
+                textScrollPane.getHorizontalScrollBar().setValue(0);
+            }
+        });
+    }
+
     public void setHighlightsAll(List<JsonObject> matches, int selectedGlobalMatchIndex) {
         // 直接在主线程调用，防抖逻辑交给textPane
         SwingUtilities.invokeLater(() -> {
@@ -707,8 +717,7 @@ public class MessageComponent extends JBPanel<MessageComponent> implements Messa
     }
 
     /**
-     * !!! 关键的清理方法 !!!
-     * 在组件被移除前调用，用于解除所有可能阻止其被GC的引用。
+     * 清理方法
      */
     public void cleanup() {
         // 1. 清空对外部类（如父控制器）的回调引用
@@ -717,29 +726,22 @@ public class MessageComponent extends JBPanel<MessageComponent> implements Messa
 
         // 2. 清理 MessageActionsComponent
         if (messageActions != null) {
-            // 假设 MessageActionsComponent 也有一个 cleanup 方法
             messageActions.setActionCallback(null);
             messageActions.cleanup();
             messageActions = null; // 清空对 MessageActionsComponent 的引用
         }
 
-        // 3. 移除鼠标监听器 (对于直接添加在 MessageComponent 上的监听器)
-        // 遍历并移除所有在 MessageComponent 实例上直接注册的 MouseListener
         for (MouseListener m : getMouseListeners()) {
             removeMouseListener(m);
         }
 
-        // 4. 如果内部有其他可能导致泄漏的组件或资源，在这里进行清理
-        // 它们也需要自己的 cleanup 方法，并在此处调用。
         if (textPane != null) {
-            textPane.clearHighlights(); // 示例：清理文本高亮
-            // 如果 textPane 或 textArea 内部有监听器或 Timer，也需要提供 cleanup 方法并调用
+            textPane.clearHighlights(); // 清理文本高亮
         }
         if (textArea != null) {
             textArea.clearHighlights();
         }
 
-        // ... 其他内部组件的清理
         removeAll();
     }
 }

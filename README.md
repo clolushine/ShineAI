@@ -14,7 +14,7 @@ ShineAI 是一款强大的 IntelliJ IDEA 插件，旨在通过集成 AI 功能�
 **主要亮点 (Key Highlights)：**
 
 *   **⚡️ 原生性能 (Native Performance)：** 采用 Java Swing 开发，包体积小，内存占用低，运行更流畅。**没有使用嵌入式浏览器**，因此启动更快，资源消耗更少！
-*   **🌐 多AI服务商支持 (Multi-AI Provider Support)：** 集成了 OpenAI、Google AI、Anthropic AI、Cloudflare Worker AI、Groq AI 和 OpenRouter AI 等主流 AI 服务。
+*   **🌐 多AI服务商支持 (Multi-AI Provider Support)：** 集成了 OpenAI、Google AI、Claude AI 等主流 AI 服务。
 *   **💰 灵活高效 (Flexible & Efficient)：** 支持**多AI API Key 调用，并可设置权重**，帮助您优化不同服务商的使用成本和策略。
 *   **📚 丰富的显示效果 (Rich Content Display)：** AI 回复已支持**代码块复制**、**表格渲染**、**数学公式渲染**。（代码高亮功能目前暂无法实现）
 *   **🔍 智能功能 (Smart Features)：** AI 聊天、流式输出、图片与附件支持及预览、**聊天内容检索**，以及强大的提示词管理等。
@@ -59,6 +59,14 @@ ShineAI 的核心功能，包括用户登录、聊天内容存储、图片/附�
 *   **支持聊天内容检索。**
 *   支持多提示词功能，提示词管理等。
 *   支持数据记录保存，导出等。
+
+#### 🌐 已支持的AI服务商
+*   OpenAI
+*   Google AI
+*   Anthropic AI
+*   Cloudflare Worker AI
+*   Groq AI
+*   OpenRouter AI
 
 **查看以下演示图例，了解 ShineAI 的功能！ (Check out the demos below to see ShineAI in action!)**
 

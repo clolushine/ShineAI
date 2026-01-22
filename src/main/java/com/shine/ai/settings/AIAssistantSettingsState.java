@@ -1,7 +1,7 @@
 
 /*
- * ShineAI - An IntelliJ IDEA plugin for AI services.
- * Copyright (C) 2025 Shine Zhong
+ * ShineAI - An IntelliJ IDEA plugin.
+ * Copyright (C) 2026 Shine Zhong
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -53,6 +53,7 @@ public class AIAssistantSettingsState implements PersistentStateComponent<AIAssi
 
   public Integer requestTimeout = 60000;
   public Integer promptsPos = 1;
+  public Integer themeVal = 0; // theme 0 dark, 1 light
   public Boolean enableLineWarp = true;
   public Boolean enableAvatar = true;
   public Boolean enableMsgPanelAIInfo = true;

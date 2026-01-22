@@ -1,6 +1,6 @@
 /*
- * ShineAI - An IntelliJ IDEA plugin for AI services.
- * Copyright (C) 2025 Shine Zhong
+ * ShineAI - An IntelliJ IDEA plugin.
+ * Copyright (C) 2026 Shine Zhong
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -229,7 +229,9 @@ public class ChatCollectionDialog extends JDialog {
             centerPanel.setBorder(JBUI.Borders.empty(4));
 
             RoundPanel contentTextPanel = new RoundPanel(new BorderLayout());
-            contentTextPanel.setBackground(new JBColor(Color.decode("#f1f1e1"), Color.decode("#f1f1f1")));
+            contentTextPanel.setArc(12,12);
+            contentTextPanel.setBorder(JBUI.Borders.empty(10,12));
+            contentTextPanel.setBackground(new JBColor(Color.decode("#f1f1e1"), Color.decode("#45494a")));
             contentTextPanel.setMaximumSize(new Dimension(contentTextPanel.getWidth(),128));
             String contentTextAreaStr = collectionItem.get("subTitle").getAsString().isEmpty() ? "null" : StringUtil.stringEllipsis(collectionItem.get("subTitle").getAsString(), 192);
             LimitedTextAreaV contentTextArea = new LimitedTextAreaV(contentTextAreaStr);
@@ -373,7 +375,7 @@ public class ChatCollectionDialog extends JDialog {
             setOpaque(false); // 按单词换行
             setBorder(JBUI.Borders.empty(6));
             setFont(new Font("Microsoft YaHei", Font.PLAIN,stateStore.CHAT_PANEL_FONT_SIZE));
-            setForeground(new JBColor(Color.decode("#060606"), Color.decode("#000000")));
+            setForeground(new JBColor(Color.decode("#060606"), Color.decode("#999999")));
             setLineWrap(true);
             setWrapStyleWord(true);
             setText(content);

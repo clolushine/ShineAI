@@ -1,6 +1,6 @@
 /*
- * ShineAI - An IntelliJ IDEA plugin for AI services.
- * Copyright (C) 2025 Shine Zhong
+ * ShineAI - An IntelliJ IDEA plugin.
+ * Copyright (C) 2026 Shine Zhong
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -85,6 +85,7 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
     private JPanel signPanel;
     private JComboBox<String> PromptsPosComboBox;
     private JLabel cacheUsedInfoStringField;
+    private JComboBox<String> ThemeComboBox;
 
     private LoadingButton logoutButton;
     private LoadingButton loginButton;
@@ -103,6 +104,12 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
         put(0,"left");
         put(1,"right");
         put(2,"hide");
+    }};
+
+    private final Map<Integer,String> themeComboBoxItemsVal = new HashMap<>(){{
+        put(0,"auto");
+        put(1,"light");
+        put(2,"dark");
     }};
 
     private boolean needRestart = false;
@@ -127,6 +134,8 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
         dialogFontSizeSpinner.setModel(fontSizeModel);
 
         PromptsPosComboBox.setModel(new DefaultComboBoxModel<>(promptsComboBoxItemsPos.values().toArray(new String[0])));
+
+        ThemeComboBox.setModel(new DefaultComboBoxModel<>(themeComboBoxItemsVal.values().toArray(new String[0])));
 
         updateCacheUsedInfo(); // 更新缓存使用情况
 
@@ -207,6 +216,8 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
 
         PromptsPosComboBox.setSelectedItem(promptsComboBoxItemsPos.get(state.promptsPos));
 
+        ThemeComboBox.setSelectedItem(themeComboBoxItemsVal.get(state.themeVal));
+
         dialogFontSizeSpinner.setValue(state.CHAT_PANEL_FONT_SIZE);
 
         enableLineWarpCheckBox.setSelected(state.enableLineWarp);
@@ -235,6 +246,7 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
                 !StringUtil.equals(state.contentOrder.get(3), (String)thirdCombobox.getSelectedItem()) ||
                 state.CHAT_PANEL_FONT_SIZE != (int) dialogFontSizeSpinner.getValue() ||
                 promptsComboBoxItemsPos.get(state.promptsPos) != PromptsPosComboBox.getSelectedItem() ||
+                themeComboBoxItemsVal.get(state.themeVal) != ThemeComboBox.getSelectedItem() ||
                 !state.enableAvatar == enableAvatarCheckBox.isSelected() ||
                 !state.enableLineWarp == enableLineWarpCheckBox.isSelected() ||
                 !state.enableMsgPanelAIInfo == enableAIInfoCheckBox.isSelected()
@@ -242,6 +254,7 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
 
         return !Objects.equals(state.requestTimeout, requestTimeoutField.getValue()) ||
                 promptsComboBoxItemsPos.get(state.promptsPos) != PromptsPosComboBox.getSelectedItem() ||
+                themeComboBoxItemsVal.get(state.themeVal) != ThemeComboBox.getSelectedItem() ||
                 !state.enableAvatar == enableAvatarCheckBox.isSelected() ||
                 !state.enableLineWarp == enableLineWarpCheckBox.isSelected() ||
                 !state.enableMsgPanelAIInfo == enableAIInfoCheckBox.isSelected() ||
@@ -263,9 +276,16 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
                 .map(Map.Entry::getKey)
                 .findFirst().orElse(0);
 
+        Integer themePosItem = themeComboBoxItemsVal.entrySet()
+                .stream()
+                .filter(entry ->  entry.getValue() == ThemeComboBox.getSelectedItem())
+                .map(Map.Entry::getKey)
+                .findFirst().orElse(0);
+
         // 默认使用头像
         state.CHAT_PANEL_FONT_SIZE = (int) dialogFontSizeSpinner.getValue();
         state.promptsPos =  promptsPosItem;
+        state.themeVal = themePosItem;
         state.enableLineWarp = enableLineWarpCheckBox.isSelected();
         state.enableAvatar = enableAvatarCheckBox.isSelected();
         state.enableMsgPanelAIInfo = enableAIInfoCheckBox.isSelected();
