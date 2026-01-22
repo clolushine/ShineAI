@@ -8,10 +8,10 @@
 </p>
 
 <p align="center">
-![GitHub Stars](https://img.shields.io/github/stars/clolushine/ShineAI?style=social)
-![GitHub Forks](https://img.shields.io/github/forks/clolushine/ShineAI?style=social)
-![License](https://img.shields.io/github/license/clolushine/ShineAI)
-![IDEA Compatibility](https://img.shields.io/badge/JetBrains%20IDEs%20Version-222.2680.4%2B-blue)
+<img src="https://img.shields.io/github/stars/clolushine/ShineAI?style=social" alt="GitHub Stars"> 
+<img src="https://img.shields.io/github/forks/clolushine/ShineAI?style=social" alt="GitHub Forks"> 
+<img src="https://img.shields.io/github/license/clolushine/ShineAI" alt="License"> 
+<img src="https://img.shields.io/badge/JetBrains%20IDEs%20Version-222.2680.4%2B-blue" alt="IDEA Compatibility">
 </p>
 
 ---
