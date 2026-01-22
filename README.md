@@ -8,10 +8,10 @@
 </p>
 
 <p align="center">
-<img src="[https://img.shields.io/github/stars/clolushine/ShineAI?style=social](https://img.shields.io/github/stars/clolushine/ShineAI?style=social)" alt="Stars">
-<img src="[https://img.shields.io/github/forks/clolushine/ShineAI?style=social](https://img.shields.io/github/forks/clolushine/ShineAI?style=social)" alt="Forks">
-<img src="[https://img.shields.io/github/license/clolushine/ShineAI](https://img.shields.io/github/license/clolushine/ShineAI)" alt="License">
-<img src="[https://img.shields.io/badge/JetBrains%20IDEs%20Version-222.2680.4%2B-blue](https://img.shields.io/badge/JetBrains%20IDEs%20Version-222.2680.4%2B-blue)" alt="Compatibility">
+![GitHub Stars](https://img.shields.io/github/stars/clolushine/ShineAI?style=social)
+![GitHub Forks](https://img.shields.io/github/forks/clolushine/ShineAI?style=social)
+![License](https://img.shields.io/github/license/clolushine/ShineAI)
+![IDEA Compatibility](https://img.shields.io/badge/JetBrains%20IDEs%20Version-222.2680.4%2B-blue)
 </p>
 
 ---
@@ -55,7 +55,7 @@ ShineAI 是一款强大的 IntelliJ IDEA 插件，旨在通过集成 AI 功能�
 
 
 
-**使用本插件及其关联服务，即表示您已同意：[隐私政策与使用协议**](https://ai.5205203.xyz/#/pages/login/agreement/index)
+**使用本插件及其关联服务，即表示您已同意：** [隐私政策与使用协议](https://ai.5205203.xyz/#/pages/login/agreement/index)
 
 ---
 

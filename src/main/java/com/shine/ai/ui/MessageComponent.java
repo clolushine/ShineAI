@@ -403,7 +403,9 @@ public class MessageComponent extends JBPanel<MessageComponent> implements Messa
 
         textPane.updateText(content);
 
-        SwingUtilities.invokeLater(()-> textScrollPane.getHorizontalScrollBar().setValue(0));
+        SwingUtilities.invokeLater(()-> {
+            textScrollPane.getHorizontalScrollBar().setValue(0);
+        });
 
         return textScrollPane;
     }
@@ -441,7 +443,8 @@ public class MessageComponent extends JBPanel<MessageComponent> implements Messa
     }
 
     public RoundPanel createMessageAreaComponent(String content) {
-        messageAreaPanel = new RoundPanel();
+        messageAreaPanel = new RoundPanel(new BorderLayout());
+        messageAreaPanel.setOpaque(true);
         messageAreaPanel.setLayout(new BoxLayout(messageAreaPanel, BoxLayout.Y_AXIS)); // 设置纵向排列
 
         messageAreaPanel.add(TextPaneAreaComponent(content));
@@ -631,10 +634,10 @@ public class MessageComponent extends JBPanel<MessageComponent> implements Messa
         }
     }
 
-    public void changeTheme(boolean isBright) {
+    public void changeTheme() {
         SwingUtilities.invokeLater(() -> {
             if (textPane != null) {
-                textPane.changeTextPaneTheme(isBright);
+                textPane.changeTextPaneTheme();
                 textPane.updateText(chatItemData.get("content").getAsString());
                 textScrollPane.getHorizontalScrollBar().setValue(0);
             }

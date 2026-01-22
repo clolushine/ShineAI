@@ -57,7 +57,6 @@ import java.awt.*;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
@@ -66,10 +65,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-public class TextPaneComponent extends JEditorPane {
+public class TextPaneComponent extends JTextPane {
     private final AIAssistantSettingsState stateStore = AIAssistantSettingsState.getInstance();
-
-    private final HTMLEditorKit textPaneKit;
 
     private final List<Element> codeElementList = new ArrayList<>();
 
@@ -108,35 +105,27 @@ public class TextPaneComponent extends JEditorPane {
         });
         NotificationsUtil.configureHtmlEditorKit(this, true);
 
-        HTMLDocument document = (HTMLDocument) getDocument();
-
-        textPaneKit = (HTMLEditorKit) getEditorKit();
-
-        boolean isBright = stateStore.themeVal == 0 ? JBColor.isBright() : stateStore.themeVal == 1;
-
         // 设置主题颜色
-        changeTextPaneTheme(isBright);
+        changeTextPaneTheme();
 
         // 内容区容器节点
-        try {
-            textPaneKit.insertHTML(document, document.getLength(), String.format("<div class=\"content\">%s</div>", " "), 0, 0, null);
-        } catch (BadLocationException | IOException e) {
-            // 处理异常，例如打印错误信息或显示默认内容
-            setText("Error rendering content: " + e.getMessage());
-        }
-
-        setCaretPosition(document.getLength());
+        updateText(" ");
     }
 
     public HTMLEditorKit getTextPaneKit() {
-        return textPaneKit;
+        return (HTMLEditorKit) getEditorKit();
     }
 
-    public void changeTextPaneTheme(boolean isBright) {
+    public void changeTextPaneTheme() {
+        boolean isBright = stateStore.themeVal == 0 ? JBColor.isBright() : stateStore.themeVal == 1;
+
+        HTMLEditorKit textPaneKit = (HTMLEditorKit) getEditorKit();
+
+        textPaneKit.setStyleSheet(new StyleSheet()); // 重置样式
         StyleSheet themeStyle = textPaneKit.getStyleSheet();
 
         // styleSheet.loadRules(new InputStreamReader(cssURL.openStream()), this.getClass().getResource("/css/darcula.min.css")); // 使用URL作为ref参数
-        themeStyle.addRule("body{padding: 0;margin:0;max-width: 100%}");
+        themeStyle.addRule("body{padding: 0;margin:0;background: transparent;}");
         themeStyle.addRule(
                 String.format(".content{ display: block; padding: 10px; color: %s; border-radius: 16px;background: %s;}",
                         isBright ? "#000000" : "#a3a3a3",
@@ -147,13 +136,13 @@ public class TextPaneComponent extends JEditorPane {
         themeStyle.addRule(
                 String.format(".code-container{color: %s;border-radius: 10px;background: %s;}",
                         isBright ? "#000000" : "#888888",
-                        isBright ? "#f0f4f9" : "#2b2b2b"
+                        isBright ? "#f0f4f9" : "#353535"
                 ));
 
         themeStyle.addRule(
                 String.format(".code-container .code-copy{padding:6px;color: %s;background: %s;border-radius: 10px;padding-right:12px;font-size: 11px;}",
                         isBright ? "#000000" : "#00bcbc",
-                        isBright ? "#dfdfdf" : "#0d1117"
+                        isBright ? "#dfdfdf" : "#2b2b2b"
                 ));
         themeStyle.addRule(".code-container .code-copy .copy-btn{background:#9ad5ef;text-align:left;margin-right:10px;text-decoration: none;color: #000000;cursor: pointer;padding:0 6px;border-radius:22px;}");
         themeStyle.addRule(".code-container .code-copy .copy-btn:hover{text-decoration: none;}");

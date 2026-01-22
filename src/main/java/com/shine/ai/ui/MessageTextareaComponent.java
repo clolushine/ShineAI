@@ -39,8 +39,6 @@ public class MessageTextareaComponent extends JPanel {
     private final JTextArea textArea;
 
     public MessageTextareaComponent(String content,Boolean isMe) {
-        boolean isBright = stateStore.themeVal == 0 ? JBColor.isBright() : stateStore.themeVal == 1;
-
         this.background = stateStore.themeVal == 0 ?
                 (isMe ? new JBColor(Color.decode("#b4d6ff"), Color.decode("#292929")) : new JBColor(Color.decode("#ffffff"), Color.decode("#4e5253")))
                 :

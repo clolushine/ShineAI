@@ -345,11 +345,10 @@ public class MessageGroupComponent extends JBPanel<MessageGroupComponent> implem
     }
 
     public void changeMessagePanelTheme() {
-        boolean isBright = stateStore.themeVal == 0 ? JBColor.isBright() : stateStore.themeVal == 1;
         for (int i = 0; i < myList.getComponentCount(); i++) { // 从后往前循环
             Component component = myList.getComponent(i);
             if (component instanceof MessageComponent messageComponent) {
-                messageComponent.changeTheme(isBright);
+                messageComponent.changeTheme();
             }
         }
     }
