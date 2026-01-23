@@ -38,6 +38,7 @@ jobs:
           VERSION=$(grep 'pluginVersion' gradle.properties | cut -d'=' -f2 | xargs)
           TAG_VERSION=$(grep 'pluginTagVersion' gradle.properties | cut -d'=' -f2 | xargs)
           NAME=$(grep 'pluginName' gradle.properties | cut -d'=' -f2 | xargs)
+          echo "tag_version=$TAG_VERSION" >> $GITHUB_OUTPUT
           echo "full_name=${NAME}-${VERSION}" >> $GITHUB_OUTPUT
 
       # 构建 IntelliJ 插件
