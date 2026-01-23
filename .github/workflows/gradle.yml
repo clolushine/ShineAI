@@ -10,7 +10,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      # write 才能发布 Release
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -35,12 +36,26 @@ jobs:
         id: plugin_info
         run: |
           VERSION=$(grep 'pluginVersion' gradle.properties | cut -d'=' -f2 | xargs)
+          TAG_VERSION=$(grep 'pluginTagVersion' gradle.properties | cut -d'=' -f2 | xargs)
           NAME=$(grep 'pluginName' gradle.properties | cut -d'=' -f2 | xargs)
           echo "full_name=${NAME}-${VERSION}" >> $GITHUB_OUTPUT
 
       # 构建 IntelliJ 插件
       - name: Build Plugin with Gradle
         run: ./gradlew buildPlugin
+
+      # 发布到 Releases
+      - name: Release Plugin
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/master'
+        with:
+          # 创建 github 的标签用于发布到 release，如 v2.2.8
+          tag_name: v${{ steps.plugin_info.outputs.tag_version }}
+          name: v${{ steps.plugin_info.outputs.tag_version }}
+          generate_release_notes: true # 自动根据提交记录写说明
+          files: build/distributions/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Package
         uses: actions/upload-artifact@v4
