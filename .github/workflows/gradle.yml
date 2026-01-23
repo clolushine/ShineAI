@@ -13,33 +13,41 @@ jobs:
       contents: read
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
 
-    - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v4
-      with:
-        gradle-version: '8.7'
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
 
-    # 给 gradlew 赋予执行权限，防止在 Linux 环境下报错
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
+      # 给 gradlew 赋予执行权限，防止在 Linux 环境下报错
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+        
+      # 从 gradle.properties 中提取插件名称和版本号
+      - name: Get Plugin Version
+        id: plugin_info
+        run: |
+          VERSION=$(grep 'pluginVersion' gradle.properties | cut -d'=' -f2 | xargs)
+          NAME=$(grep 'pluginName' gradle.properties | cut -d'=' -f2 | xargs)
+          echo "full_name=${NAME}-${VERSION}" >> $GITHUB_OUTPUT
 
-    # 构建 IntelliJ 插件
-    - name: Build Plugin with Gradle
-      run: ./gradlew buildPlugin
+      # 构建 IntelliJ 插件
+      - name: Build Plugin with Gradle
+        run: ./gradlew buildPlugin
 
-    - name: Upload Package
-      uses: actions/upload-artifact@v4
-      with:
-        name: ShineAI-IDEA-Plugin
-        # IDEA 插件打包后的 zip 文件默认存放在 build/distributions/
-        path: build/distributions/*.zip
+      - name: Upload Package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.plugin_info.outputs.full_name }}
+          # IDEA 插件打包后的 zip 文件默认存放在 build/distributions/
+          path: build/distributions/*.zip
 
   # 依赖提交
   dependency-submission:
@@ -47,11 +55,11 @@ jobs:
     permissions:
       contents: write
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-    - name: Generate and submit dependency graph
-      uses: gradle/actions/dependency-submission@v4
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      - name: Generate and submit dependency graph
+        uses: gradle/actions/dependency-submission@v4
