@@ -467,7 +467,6 @@ public class MessageComponent extends JBPanel<MessageComponent> implements Messa
         long time = chatItemData.get("updateAt").getAsLong();
         boolean isMe = StringUtil.equals(chatItemData.get("role").getAsString(),"user");
         String fromLLM = chatItemData.get("fromLLM").getAsString();
-        long refreshTimestamp = GeneratorUtil.getTimestamp();
 
         Color colorBlue = Color.decode("#4db2dd");
         Color colorRed = Color.decode("#dd524d");
@@ -476,9 +475,6 @@ public class MessageComponent extends JBPanel<MessageComponent> implements Messa
         boolean showProgressBar = status == 2;
 
         SwingUtilities.invokeLater(() -> {
-            // 更新时间
-            timeLabel.setText(TimeUtil.timeFormat(refreshTimestamp,null));
-            chatItemData.addProperty("updateAt",refreshTimestamp);
 
             if (llmInfoPanel != null) {
                 llmInfoPanel.setVisible(time != 0 && status != 0 && status != 2 && !isMe && !fromLLM.isBlank());
@@ -618,8 +614,17 @@ public class MessageComponent extends JBPanel<MessageComponent> implements Messa
         updateStatusContent(status);
 
         if (status != 2) {
+            refreshContentUpdateAt();
             updateContentToState();
         }
+    }
+
+    public void refreshContentUpdateAt() {
+        long refreshTimestamp = GeneratorUtil.getTimestamp();
+
+        // 更新时间
+        timeLabel.setText(TimeUtil.timeFormat(refreshTimestamp,null));
+        chatItemData.addProperty("updateAt",refreshTimestamp);
     }
 
     public void updateContentToState() {
