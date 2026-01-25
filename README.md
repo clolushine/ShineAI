@@ -81,6 +81,7 @@ ShineAI 是一款强大的 IntelliJ IDEA 插件，旨在通过集成 AI 功能�
 
 * OpenAI / Google AI / Anthropic AI
 * Cloudflare Worker AI / Groq AI / OpenRouter AI
+* DeepSeek AI
 
 ---
 

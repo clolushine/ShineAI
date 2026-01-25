@@ -97,7 +97,8 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
             Anthropic_AI_CONTENT_NAME,
             CLOUDFLARE_AI_CONTENT_NAME,
             GROQ_AI_CONTENT_NAME,
-            OpenRouter_AI_CONTENT_NAME
+            OpenRouter_AI_CONTENT_NAME,
+            DeepSeek_AI_CONTENT_NAME
     };
 
     private final Map<Integer,String> promptsComboBoxItemsPos = new HashMap<>(){{

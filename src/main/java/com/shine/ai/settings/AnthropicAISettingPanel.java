@@ -279,7 +279,8 @@ public class AnthropicAISettingPanel implements Configurable, Disposable {
             JsonArray localModels = DBUtil.getLLMsByKey(Anthropic_AI_KEY);
 
             assert modelsCombobox != null;
-            JsonArray models = ShineAIUtil.getAIModels(Anthropic_AI_KEY,Anthropic_AI_LLM_API);
+            JsonObject apiKeyItem = OtherUtil.weightedRandomTarget(thisApiKeys);
+            JsonArray models = ShineAIUtil.getAIModels(Anthropic_AI_KEY,Anthropic_AI_LLM_API,apiKeyItem);
 
             int beforeLength = localModels.size();
             int afterLength = models.size();

@@ -279,7 +279,8 @@ public class GroqAISettingPanel implements Configurable, Disposable {
             JsonArray localModels = DBUtil.getLLMsByKey(GROQ_AI_KEY);
 
             assert modelsCombobox != null;
-            JsonArray models = ShineAIUtil.getAIModels(GROQ_AI_KEY,GROQ_AI_LLM_API);
+            JsonObject apiKeyItem = OtherUtil.weightedRandomTarget(thisApiKeys);
+            JsonArray models = ShineAIUtil.getAIModels(GROQ_AI_KEY,GROQ_AI_LLM_API,apiKeyItem);
 
             int beforeLength = localModels.size();
             int afterLength = models.size();

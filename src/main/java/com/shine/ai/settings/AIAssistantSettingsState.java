@@ -71,6 +71,7 @@ public class AIAssistantSettingsState implements PersistentStateComponent<AIAssi
     put(4, CLOUDFLARE_AI_CONTENT_NAME);
     put(5, GROQ_AI_CONTENT_NAME);
     put(6, OpenRouter_AI_CONTENT_NAME);
+    put(7, DeepSeek_AI_CONTENT_NAME);
   }};
 
   public Map<Integer,String> AIKeyList = new HashMap<>(){{
@@ -80,6 +81,7 @@ public class AIAssistantSettingsState implements PersistentStateComponent<AIAssi
     put(4, CLOUDFLARE_AI_KEY);
     put(5, GROQ_AI_KEY);
     put(6, OpenRouter_AI_KEY);
+    put(7, DeepSeek_AI_KEY);
   }};
 
   public Map<Integer,String> AINameList = new HashMap<>(){{
@@ -89,6 +91,7 @@ public class AIAssistantSettingsState implements PersistentStateComponent<AIAssi
     put(4, CLOUDFLARE_AI_NAME);
     put(5, GROQ_AI_NAME);
     put(6, OpenRouter_AI_NAME);
+    put(7, DeepSeek_AI_NAME);
   }};
 
   public Map<Integer,String> AIIconList = new HashMap<>(){{
@@ -98,6 +101,7 @@ public class AIAssistantSettingsState implements PersistentStateComponent<AIAssi
     put(4, CLOUDFLARE_AI_ICON);
     put(5, GROQ_AI_ICON);
     put(6, OpenRouter_AI_ICON);
+    put(7, DeepSeek_AI_ICON);
   }};
 
   public Map<Integer,String> AIAPIList = new HashMap<>(){{
@@ -107,6 +111,7 @@ public class AIAssistantSettingsState implements PersistentStateComponent<AIAssi
     put(4, CLOUDFLARE_AI_API);
     put(5, GROQ_AI_API);
     put(6, OpenRouter_AI_API);
+    put(7, DeepSeek_AI_API);
   }};
 
   public Map<Integer,String> AIClassNameList = new HashMap<>(){{
@@ -116,6 +121,7 @@ public class AIAssistantSettingsState implements PersistentStateComponent<AIAssi
     put(4, CLOUDFLARE_SETTING_CLASS_NAME);
     put(5, GROQ_SETTING_CLASS_NAME);
     put(6, OpenRouter_SETTING_CLASS_NAME);
+    put(7, DeepSeek_SETTING_CLASS_NAME);
   }};
 
   public List<String> aiVenderList = initAIVenderList();
@@ -150,6 +156,9 @@ public class AIAssistantSettingsState implements PersistentStateComponent<AIAssi
   // OpenRouter AI
   public String OpenRouterAISettingInfo = initAISettingInfo();
 
+  // DeepSeek AI
+  public String DeepSeekAISettingInfo = initAISettingInfo();
+
   // Anthropic AI
   public String AnthropicAISettingInfo = initAISettingInfo();
 
@@ -177,6 +186,7 @@ public class AIAssistantSettingsState implements PersistentStateComponent<AIAssi
       case GROQ_AI_CONTENT_NAME -> getTarget = GroqAISettingInfo;
       case OpenAI_CONTENT_NAME -> getTarget = OpenAISettingInfo;
       case OpenRouter_AI_CONTENT_NAME -> getTarget = OpenRouterAISettingInfo;
+      case DeepSeek_AI_CONTENT_NAME -> getTarget = DeepSeekAISettingInfo;
       case Anthropic_AI_CONTENT_NAME -> getTarget = AnthropicAISettingInfo;
       default -> getTarget = CFAISettingInfo;
     }
@@ -190,6 +200,7 @@ public class AIAssistantSettingsState implements PersistentStateComponent<AIAssi
       case GROQ_AI_CONTENT_NAME -> getTarget = GroqAISettingInfo;
       case OpenAI_CONTENT_NAME -> getTarget = OpenAISettingInfo;
       case OpenRouter_AI_CONTENT_NAME -> getTarget = OpenRouterAISettingInfo;
+      case DeepSeek_AI_CONTENT_NAME -> getTarget = DeepSeekAISettingInfo;
       case Anthropic_AI_CONTENT_NAME -> getTarget = AnthropicAISettingInfo;
       default -> getTarget = CFAISettingInfo;
     }
@@ -203,6 +214,7 @@ public class AIAssistantSettingsState implements PersistentStateComponent<AIAssi
       case GROQ_AI_CONTENT_NAME -> GroqAISettingInfo = setJsonObjectAction(GroqAISettingInfo,settingInfo);
       case OpenAI_CONTENT_NAME -> OpenAISettingInfo = setJsonObjectAction(OpenAISettingInfo,settingInfo);
       case OpenRouter_AI_CONTENT_NAME -> OpenRouterAISettingInfo = setJsonObjectAction(OpenRouterAISettingInfo,settingInfo);
+      case DeepSeek_AI_CONTENT_NAME -> DeepSeekAISettingInfo = setJsonObjectAction(DeepSeekAISettingInfo,settingInfo);
       case Anthropic_AI_CONTENT_NAME -> AnthropicAISettingInfo = setJsonObjectAction(AnthropicAISettingInfo,settingInfo);
       default -> CFAISettingInfo = setJsonObjectAction(CFAISettingInfo,settingInfo);
     }
@@ -218,6 +230,7 @@ public class AIAssistantSettingsState implements PersistentStateComponent<AIAssi
       case GROQ_AI_CONTENT_NAME -> GroqAISettingInfo = setJsonObjectAction(GroqAISettingInfo,settingInfo);
       case OpenAI_CONTENT_NAME -> OpenAISettingInfo = setJsonObjectAction(OpenAISettingInfo,settingInfo);
       case OpenRouter_AI_CONTENT_NAME -> OpenRouterAISettingInfo = setJsonObjectAction(OpenRouterAISettingInfo,settingInfo);
+      case DeepSeek_AI_CONTENT_NAME -> DeepSeekAISettingInfo = setJsonObjectAction(DeepSeekAISettingInfo,settingInfo);
       case Anthropic_AI_CONTENT_NAME -> AnthropicAISettingInfo = setJsonObjectAction(AnthropicAISettingInfo,settingInfo);
       default -> CFAISettingInfo = setJsonObjectAction(CFAISettingInfo,settingInfo);
     }
@@ -274,7 +287,7 @@ public class AIAssistantSettingsState implements PersistentStateComponent<AIAssi
     boolean isCan = false;
     switch (panelName) {
       case Google_AI_CONTENT_NAME -> isCan = true;
-      case GROQ_AI_CONTENT_NAME, OpenAI_CONTENT_NAME, OpenRouter_AI_CONTENT_NAME, Anthropic_AI_CONTENT_NAME -> {}
+      case GROQ_AI_CONTENT_NAME, OpenAI_CONTENT_NAME, OpenRouter_AI_CONTENT_NAME, DeepSeek_AI_CONTENT_NAME, Anthropic_AI_CONTENT_NAME -> {}
       default -> {}
     }
     return isCan;
@@ -316,7 +329,7 @@ public class AIAssistantSettingsState implements PersistentStateComponent<AIAssi
           }
         }
       }
-      case OpenAI_CONTENT_NAME, Anthropic_AI_CONTENT_NAME -> {}
+      case OpenAI_CONTENT_NAME, DeepSeek_AI_CONTENT_NAME, Anthropic_AI_CONTENT_NAME -> {}
       default -> {}
     }
     return isCan;

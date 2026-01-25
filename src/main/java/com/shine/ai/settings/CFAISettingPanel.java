@@ -258,7 +258,8 @@ public class CFAISettingPanel implements Configurable, Disposable {
             JsonArray localModels = DBUtil.getLLMsByKey(CLOUDFLARE_AI_KEY);
 
             assert modelsCombobox != null;
-            JsonArray models = ShineAIUtil.getAIModels(CLOUDFLARE_AI_KEY,CLOUDFLARE_AI_LLM_API);
+            JsonObject apiKeyItem = OtherUtil.weightedRandomTarget(thisApiKeys);
+            JsonArray models = ShineAIUtil.getAIModels(CLOUDFLARE_AI_KEY,CLOUDFLARE_AI_LLM_API,apiKeyItem);
 
             int beforeLength = localModels.size();
             int afterLength = models.size();

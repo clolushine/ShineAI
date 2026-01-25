@@ -30,6 +30,9 @@
     <applicationConfigurable parentId="com.shine.ai.settings.AIAssistantSettings" instance="com.shine.ai.settings.OpenRouterAISettingPanel"
                              id="com.shine.ai.settings.OpenRouterAI"
                              displayName="OpenRouterAI"/>
+    <applicationConfigurable parentId="com.shine.ai.settings.AIAssistantSettings" instance="com.shine.ai.settings.DeepSeekAISettingPanel"
+                             id="com.shine.ai.settings.DeepSeekAI"
+                             displayName="DeepSeekAI"/>
     <applicationService serviceImplementation="com.shine.ai.settings.AIAssistantSettingsState"/>
     <applicationService serviceImplementation="com.shine.ai.core.TokenManager"/>
     <projectService serviceImplementation="com.shine.ai.core.SendAction"/>

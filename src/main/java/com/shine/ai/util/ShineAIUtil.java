@@ -279,14 +279,18 @@ public class ShineAIUtil {
         }
     }
 
-    public static JsonArray getAIModels(String vendor,String url) {
+    public static JsonArray getAIModels(String vendor,String url, JsonObject apiKeyItem) {
         JsonObject params = new JsonObject();
         JsonArray models = new JsonArray();
 
         if (state.getUserInfo().has("id")) {
             params.addProperty("uid",state.getUserInfo().get("id").getAsString());
             params.addProperty("vendor",vendor.toLowerCase());
-            params.addProperty("apiKey","");
+
+            if (apiKeyItem != null && !apiKeyItem.isJsonNull()) {
+                params.addProperty("apiId", apiKeyItem.get("apiId").getAsString());
+                params.addProperty("apiKey", apiKeyItem.get("apiKey").getAsString());
+            }
 
             if (url.equals("/ai/aiModels")) {
                 params.addProperty("cfId", "");

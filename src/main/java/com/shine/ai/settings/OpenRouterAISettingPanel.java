@@ -288,7 +288,8 @@ public class OpenRouterAISettingPanel implements Configurable, Disposable {
             JsonArray localModels = DBUtil.getLLMsByKey(OpenRouter_AI_KEY);
 
             assert modelsCombobox != null;
-            JsonArray models = ShineAIUtil.getAIModels(OpenRouter_AI_KEY,OpenRouter_AI_LLM_API);
+            JsonObject apiKeyItem = OtherUtil.weightedRandomTarget(thisApiKeys);
+            JsonArray models = ShineAIUtil.getAIModels(OpenRouter_AI_KEY,OpenRouter_AI_LLM_API,apiKeyItem);
 
             int beforeLength = localModels.size();
             int afterLength = models.size();

@@ -52,10 +52,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import static com.shine.ai.MyToolWindowFactory.*;
+import static com.shine.ai.MyToolWindowFactory.ACTIVE_CONTENT;
 import static com.shine.ai.vendors.AIVendors.*;
 
-public class OpenAISettingPanel implements Configurable, Disposable {
+public class DeepSeekAISettingPanel implements Configurable, Disposable {
     private Project project;
 
     private JPanel myMainPanel;
@@ -82,7 +82,7 @@ public class OpenAISettingPanel implements Configurable, Disposable {
     private JLabel apikeyCountLabel;
     private static List<JsonObject> thisApiKeys;
 
-    public OpenAISettingPanel() {
+    public DeepSeekAISettingPanel() {
         createRefreshButton();
         createApikeyList();
         init();
@@ -92,7 +92,7 @@ public class OpenAISettingPanel implements Configurable, Disposable {
 
         // 如果模型为空则刷新一下模型
         assert modelsCombobox != null;
-        if (DBUtil.getLLMsByKey(OpenAI_KEY).isEmpty()) {
+        if (DBUtil.getLLMsByKey(DeepSeek_AI_KEY).isEmpty()) {
             updateModels();
         } else {
             modelsCombobox.setModel(modelsToComboBoxModel());
@@ -196,7 +196,7 @@ public class OpenAISettingPanel implements Configurable, Disposable {
 
     @Override
     public String getDisplayName() {
-        return OpenAI_CONTENT_NAME;
+        return DeepSeek_AI_CONTENT_NAME;
     }
 
     private void createRefreshButton() {
@@ -223,17 +223,17 @@ public class OpenAISettingPanel implements Configurable, Disposable {
         streamTitledBorderBox.add(stBt,BorderLayout.CENTER);
 
         modelTitledBorderBox = new JPanel(new BorderLayout());
-        TitledSeparator mdModel = new TitledSeparator(MsgEntryBundle.message("ui.setting.server.open.models.title"));
+        TitledSeparator mdModel = new TitledSeparator(MsgEntryBundle.message("ui.setting.server.deepseek.models.title"));
         modelTitledBorderBox.add(mdModel,BorderLayout.CENTER);
 
         apikeyTitledBorderBox = new JPanel(new BorderLayout());
-        TitledSeparator atBt = new TitledSeparator(MsgEntryBundle.message("ui.setting.server.open.apikey.title"));
+        TitledSeparator atBt = new TitledSeparator(MsgEntryBundle.message("ui.setting.server.deepseek.apikey.title"));
         apikeyTitledBorderBox.add(atBt,BorderLayout.CENTER);
     }
 
     public DefaultComboBoxModel<String> modelsToComboBoxModel() {
 
-        JsonArray models = DBUtil.getLLMsByKey(OpenAI_KEY);
+        JsonArray models = DBUtil.getLLMsByKey(DeepSeek_AI_KEY);
 
         HashMap<String, String> setModels = new HashMap<>();
         for (JsonElement model : models) {
@@ -276,11 +276,11 @@ public class OpenAISettingPanel implements Configurable, Disposable {
         }
 
         CompletableFuture.runAsync(() -> {
-            JsonArray localModels = DBUtil.getLLMsByKey(OpenAI_KEY);
+            JsonArray localModels = DBUtil.getLLMsByKey(DeepSeek_AI_KEY);
 
             assert modelsCombobox != null;
             JsonObject apiKeyItem = OtherUtil.weightedRandomTarget(thisApiKeys);
-            JsonArray models = ShineAIUtil.getAIModels(OpenAI_KEY,OpenAI_LLM_API,apiKeyItem);
+            JsonArray models = ShineAIUtil.getAIModels(DeepSeek_AI_KEY,DeepSeek_AI_LLM_API,apiKeyItem);
 
             int beforeLength = localModels.size();
             int afterLength = models.size();
@@ -288,7 +288,7 @@ public class OpenAISettingPanel implements Configurable, Disposable {
             String notifyString = !models.isEmpty() ? String.format("Model refreshed, %s new records added.", afterLength - beforeLength) : "Could not retrieve AI model.";
             MessageType notifyColor = !models.isEmpty() ? MessageType.INFO : MessageType.WARNING;
             BalloonUtil.showBalloon(notifyString,notifyColor,modelsCombobox);
-            if (!models.isEmpty()) DBUtil.setLLMsByKey(OpenAI_KEY,models);
+            if (!models.isEmpty()) DBUtil.setLLMsByKey(DeepSeek_AI_KEY,models);
             modelsCombobox.setModel(modelsToComboBoxModel());
             JsonElement currentModel = stateStore.getAISettingInfoByKey(getDisplayName(),"aiModel");
 
