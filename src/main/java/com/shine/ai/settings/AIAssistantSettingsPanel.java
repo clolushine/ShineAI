@@ -98,7 +98,8 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
             CLOUDFLARE_AI_CONTENT_NAME,
             GROQ_AI_CONTENT_NAME,
             OpenRouter_AI_CONTENT_NAME,
-            DeepSeek_AI_CONTENT_NAME
+            DeepSeek_AI_CONTENT_NAME,
+            Nvidia_AI_CONTENT_NAME
     };
 
     private final Map<Integer,String> promptsComboBoxItemsPos = new HashMap<>(){{
@@ -423,12 +424,6 @@ public class AIAssistantSettingsPanel implements Configurable, Disposable {
 
     public void updateStorageUsedInfo() {
         AIAssistantSettingsState state = AIAssistantSettingsState.getInstance();
-//        assert storageUsedInfoField != null;
-//        int percentage = state.getStorageUsagePercentage();
-//        storageUsedInfoField.setValue(percentage);
-//        Color storageUsedInfoStringColor = Color.decode(percentage <= 20 ? "#4ddd87" : percentage <= 80 ? "#10AEFF" : "#ff0000");
-//        storageUsedInfoStringField.setForeground(storageUsedInfoStringColor);
-//        storageUsedInfoStringField.setText(percentage + "%");
         assert storageUsedMBField != null;
         storageUsedMBField.setText(state.getStorageUsageMBInfo());
     }

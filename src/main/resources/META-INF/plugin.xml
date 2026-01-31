@@ -33,6 +33,9 @@
     <applicationConfigurable parentId="com.shine.ai.settings.AIAssistantSettings" instance="com.shine.ai.settings.DeepSeekAISettingPanel"
                              id="com.shine.ai.settings.DeepSeekAI"
                              displayName="DeepSeekAI"/>
+    <applicationConfigurable parentId="com.shine.ai.settings.AIAssistantSettings" instance="com.shine.ai.settings.NvidiaAISettingPanel"
+                             id="com.shine.ai.settings.NvidiaAI"
+                             displayName="NvidiaAI"/>
     <applicationService serviceImplementation="com.shine.ai.settings.AIAssistantSettingsState"/>
     <applicationService serviceImplementation="com.shine.ai.core.TokenManager"/>
     <projectService serviceImplementation="com.shine.ai.core.SendAction"/>

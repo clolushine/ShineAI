@@ -37,6 +37,7 @@ public class AIAssistantIcons {
     public static String ANTHROPIC_AI_URL = "https://vom3yqczvirljfap.public.blob.vercel-storage.com/unishine/claude-icon-FZgl3p0ozv8tTG39Bqb8w7xLv5GwMK.png";
     public static String OPENROUTER_AI_URL = "https://vom3yqczvirljfap.public.blob.vercel-storage.com/unishine/openrouterai-fCo245sholFMR2asjuVsiAFsCPk9ct.png";
     public static String DEEPSEEK_AI_URL = "https://vom3yqczvirljfap.public.blob.vercel-storage.com/unishine/deepseek.png";
+    public static String NVIDIA_AI_URL = "https://vom3yqczvirljfap.public.blob.vercel-storage.com/unishine/nvidia-kHBaPGsOVqZtB3PbNuyjS8vs4F8KHp.png";
     public static String CF_AI_URL = "https://vom3yqczvirljfap.public.blob.vercel-storage.com/unishine/cloudflare-icon-WCODc9u8y9JVahRapDyhqGnHZ2ixvi.png";
     public static String GOOGLE_AI_URL = "https://vom3yqczvirljfap.public.blob.vercel-storage.com/unishine/gemini-7VR2R9EoaR29OOIQHbhPYi6KrMCHeV.png";
     public static String GROQ_AI_URL = "https://vom3yqczvirljfap.public.blob.vercel-storage.com/unishine/groqai-bdEk3KbffWWpBRNi8l7sluvDwJuUCE.jpg";

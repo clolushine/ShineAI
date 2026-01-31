@@ -84,6 +84,14 @@ public class AIVendors {
     public static final String DeepSeek_AI_LLM_API = "/gpt/models";
     public static final String DeepSeek_SETTING_CLASS_NAME = DeepSeekAISettingPanel.class.getName();
 
+    public static final String Nvidia_AI_CONTENT_NAME = "NvidiaAI";
+    public static final String Nvidia_AI_KEY = "NVIDIA";
+    public static final String Nvidia_AI_NAME = "NVIDIA";
+    public static final String Nvidia_AI_ICON = AIAssistantIcons.NVIDIA_AI_URL;
+    public static final String Nvidia_AI_API = "/gpt/gptChat";
+    public static final String Nvidia_AI_LLM_API = "/gpt/models";
+    public static final String Nvidia_SETTING_CLASS_NAME = NvidiaAISettingPanel.class.getName();
+
 
     public static final Map<String, Class<? extends Configurable>> MAPPINGS = new HashMap<>() {{
         put(CLOUDFLARE_SETTING_CLASS_NAME, CFAISettingPanel.class);
@@ -93,5 +101,6 @@ public class AIVendors {
         put(Anthropic_SETTING_CLASS_NAME, AnthropicAISettingPanel.class);
         put(OpenRouter_SETTING_CLASS_NAME, OpenRouterAISettingPanel.class);
         put(DeepSeek_SETTING_CLASS_NAME, DeepSeekAISettingPanel.class);
+        put(Nvidia_SETTING_CLASS_NAME, NvidiaAISettingPanel.class);
     }};
 }
