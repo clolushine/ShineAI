@@ -1,5 +1,3 @@
-好的，我已经为您在 README 中添加了停止维护的公告。
-
 ---
 
 # <p align="center">🚀 ShineAI</p>
