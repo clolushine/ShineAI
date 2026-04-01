@@ -15,7 +15,7 @@
 
 ---
 
-***<p align="center">📢 [公告] JetBrains IDEA 插件版本已停止维护。如需可迁移至功能更强大、跨平台支持的全新版本：[点击访问](https://5205203.xyz/)</p>***
+***<p align="center">📢 [公告] JetBrains IDEA 插件版本已停止维护。如需可迁移至功能更强大、跨平台支持的全新版本：[点击前往](https://github.com/clolushine/Next-ShineAI-Releases/releases)</p>***
 
 ---
 
@@ -138,7 +138,8 @@ JLaTeXMath 库中包含了多种字体，它们各自拥有不同的许可证：
 
 ### ✨ 相关链接 (Related Links)
 
-*   **全平台版本：** [点击访问](https://5205203.xyz/)
+*   **全平台网页版本：** [点击访问](https://5205203.xyz/)
+*   **全平台桌面端版本：** [点击访问](https://github.com/clolushine/Next-ShineAI-Releases/releases)
 *   **开源许可证：** 本前端代码以 **[Apache 2.0](LICENSE)** 授权发布。
 
 ---
